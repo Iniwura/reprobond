@@ -1,0 +1,15 @@
+{
+  "fixture_version": "reprobond-live-v1",
+  "workload": "fixed-demo-workload-v1",
+  "baseline_implementation": "fixed-demo-baseline-v1",
+  "candidate_implementation": "fixed-demo-candidate-v1",
+  "execution_environment": "Linux x86_64",
+  "genlayer_chain_id": 61997,
+  "genlayer_sdk": "1.2.0",
+  "baseline_trials": 5,
+  "candidate_trials": 5,
+  "unit": "ms",
+  "same_environment": true,
+  "same_workload": true,
+  "discarded_runs": 0
+}
