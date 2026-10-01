@@ -1,0 +1,22 @@
+{
+  "fixture_version": "reprobond-corrected-v1",
+  "workload": "fixed-demo-workload-v1",
+  "baseline_implementation": "fixed-demo-baseline-v1",
+  "candidate_implementation": "fixed-demo-candidate-v1",
+  "benchmark_execution_environment": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "same_environment": true,
+    "same_workload": true,
+    "discarded_runs": 0
+  },
+  "adjudication_environment": {
+    "network": "Studio Dev",
+    "chain_id": 61997,
+    "transaction_submission_sdk": "genlayer-js 2.0.0-rc.1",
+    "sdk_role": "transaction submission and read plumbing only"
+  },
+  "baseline_trials": 5,
+  "candidate_trials": 5,
+  "unit": "ms"
+}
