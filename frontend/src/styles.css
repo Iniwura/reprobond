@@ -42,10 +42,7 @@ code, .mono { font-family: 'DM Mono', monospace; }
 .brand > span:last-child { display: grid; gap: 2px; }
 .brand strong { font-size: .77rem; letter-spacing: .15em; }
 .brand small { color: var(--muted); font: .58rem/1.2 'DM Mono', monospace; letter-spacing: .05em; }
-.brand-mark { width: 29px; height: 29px; border: 1px solid var(--ink); border-radius: 50%; display: inline-block; position: relative; }
-.brand-mark i { position: absolute; left: 6px; width: 17px; height: 1px; background: var(--ink); }
-.brand-mark i:first-child { top: 10px; transform: rotate(22deg); }
-.brand-mark i:last-child { top: 17px; transform: rotate(-16deg); }
+.brand-mark { width: 34px; height: 34px; flex: 0 0 34px; display: block; }
 .nav-links { display: flex; align-items: center; gap: 25px; }
 .nav-links a { color: var(--muted); text-decoration: none; font-size: .71rem; font-weight: 700; letter-spacing: .07em; }
 .nav-links a:hover, .nav-links a.active { color: var(--ink); }

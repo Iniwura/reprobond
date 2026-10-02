@@ -138,7 +138,7 @@ function Shell() {
   const networkOk = chainId === CHAIN_HEX
   return <div className="app-shell">
     <header className="site-header">
-      <Link to="/" className="brand"><span className="brand-mark"><i /><i /></span><span><strong>REPROBOND</strong><small>REPLICATION PROTOCOL</small></span></Link>
+      <Link to="/" className="brand"><img className="brand-mark" src="/reprobond-mark.svg" alt="" /><span><strong>REPROBOND</strong><small>REPLICATION PROTOCOL</small></span></Link>
       <nav className="nav-links" aria-label="Primary navigation">
         <NavLink to="/challenges">Challenges</NavLink>
         <NavLink to="/audit">Live proof</NavLink>

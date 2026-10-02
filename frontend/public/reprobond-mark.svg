@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <title>ReproBond</title>
+  <rect x="1.5" y="1.5" width="37" height="37" rx="18.5" fill="#171916"/>
+  <path d="M10 10.5h11.2c5.6 0 9.1 2.7 9.1 7 0 3.1-1.8 5.4-4.9 6.5L32 30H25.7l-5.6-5.4h-4.6V30H10V10.5Zm5.5 4.4v5.3h5.3c2.5 0 3.9-.9 3.9-2.7s-1.4-2.6-3.9-2.6h-5.3Z" fill="#F8F6EF"/>
+  <path d="M8.5 31.5h23" stroke="#A73B2D" stroke-width="2" stroke-linecap="square"/>
+</svg>
