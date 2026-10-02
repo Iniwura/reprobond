@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReproBond production audit runner</title>
+<style>
+:root{color-scheme:dark;font:15px/1.45 system-ui,sans-serif}body{max-width:920px;margin:2rem auto;padding:0 1rem;background:#101318;color:#edf1f7}
+section{border:1px solid #303846;border-radius:10px;padding:1rem;margin:1rem 0}button{font:inherit;padding:.55rem .8rem;border-radius:6px;border:1px solid #526070;cursor:pointer;background:#24364a;color:#fff}button:disabled{opacity:.45;cursor:not-allowed}code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0a0d11;padding:.8rem;border-radius:6px;max-height:34rem;overflow:auto}.muted{color:#aab5c4}.ok{color:#8ee6ac}.bad{color:#ff9292}.warning{color:#ffd27b}.row{display:grid;grid-template-columns:13rem 1fr;gap:.5rem;margin:.35rem 0}@media(max-width:700px){.row{grid-template-columns:1fr}}
+</style>
+<script type="importmap">
+{"imports":{"genlayer-js":"/vendor/genlayer-js/index.js","viem":"/vendor/viem/_esm/index.js","viem/accounts":"/vendor/viem/_esm/accounts/index.js","abitype":"/vendor/abitype/dist/esm/exports/index.js","@noble/hashes/":"/vendor/noble-hashes/esm/","@noble/curves/":"/vendor/noble-curves/esm/","@scure/base":"/vendor/scure-base/lib/esm/index.js","@scure/bip32":"/vendor/scure-bip32/lib/esm/index.js","@scure/bip39":"/vendor/scure-bip39/esm/index.js","@scure/bip39/":"/vendor/scure-bip39/esm/","ox":"/vendor/ox/_esm/index.js","ox/erc4337":"/vendor/ox/_esm/erc4337/index.js","ox/erc4337/":"/vendor/ox/_esm/erc4337/","ox/erc6492":"/vendor/ox/_esm/erc6492/index.js","ox/erc6492/":"/vendor/ox/_esm/erc6492/","ox/erc7821":"/vendor/ox/_esm/erc7821/index.js","ox/erc7821/":"/vendor/ox/_esm/erc7821/","ox/erc8010":"/vendor/ox/_esm/erc8010/index.js","ox/erc8010/":"/vendor/ox/_esm/erc8010/","ox/erc8021":"/vendor/ox/_esm/erc8021/index.js","ox/erc8021/":"/vendor/ox/_esm/erc8021/","ox/tempo":"/vendor/ox/_esm/tempo/index.js","ox/tempo/":"/vendor/ox/_esm/tempo/","ox/":"/vendor/ox/_esm/core/","zod":"/vendor/zod/index.js","viem/":"/vendor/viem/"}}
+</script>
+</head>
+<body>
+<h1>ReproBond production audit runner</h1>
+<p class="muted">Disposable direct Rabby/EIP-1193 harness. Not the ReproBond frontend. No private key is present.</p>
+<section>
+<div class="row"><span>Wallet</span><code id="wallet">connecting...</code></div>
+<div class="row"><span>Chain</span><code id="chain">checking...</code></div>
+<div class="row"><span>Expected sponsor</span><code>0xa35dc047f9937bf668743efbdf8ea93b31a55888</code></div>
+<div class="row"><span>Production contract</span><code>0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc</code></div>
+<div class="row"><span>Status</span><span id="status">initializing</span></div>
+</section>
+<section><h2>Authoritative challenge read</h2><div class="row"><span>Challenge ID</span><code>live-contradiction-20260930-a</code></div><pre id="challenge">No authoritative read yet.</pre></section>
+<section><button id="fund" disabled>Fund live challenge</button><p class="muted">Enabled only after direct wallet connection, sponsor/chain checks, and a fresh challenge read.</p></section>
+<section><h2>Audit log</h2><pre id="log"></pre></section>
+<script type="module" src="/main.js"></script>
+</body></html>

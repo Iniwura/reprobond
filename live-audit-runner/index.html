@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReproBond live audit</title>
+<style>
+:root{color-scheme:dark;font:15px/1.45 system-ui,sans-serif}body{max-width:820px;margin:2rem auto;padding:0 1rem;background:#101318;color:#edf1f7}
+section{border:1px solid #303846;border-radius:10px;padding:1rem;margin:1rem 0}button{font:inherit;padding:.55rem .8rem;border-radius:6px;border:1px solid #526070;cursor:pointer;background:#24364a;color:#fff;margin:.25rem .5rem .25rem 0}button:disabled{opacity:.45;cursor:not-allowed}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0a0d11;padding:.8rem;border-radius:6px;max-height:30rem;overflow:auto}.muted{color:#aab5c4}.ok{color:#8ee6ac}.bad{color:#ff9292}.warning{color:#ffd27b}.row{display:grid;grid-template-columns:12rem 1fr;gap:.5rem;margin:.35rem 0}@media(max-width:650px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>ReproBond live audit</h1>
+<p class="muted">Minimal sequential production audit runner. It uses direct Rabby/MetaMask EIP-1193, the installed Driftline GenLayer client path, fee estimation, finality waits, authoritative rereads, payout accounting, and replay verification.</p>
+<section>
+<div class="row"><span>Wallet</span><code id="wallet">not connected</code></div>
+<div class="row"><span>Chain</span><code id="chain">unknown</code></div>
+<div class="row"><span>Contract</span><code>0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc</code></div>
+<div class="row"><span>Challenge</span><code>reprobond-corrected-20261001-a</code></div>
+<div class="row"><span>Derived replication ID</span><code id="replicationId">d3dfda779724b60dacba75d35ba1ec260c0f82898facc9a610e404452606f5e4</code></div>
+<div class="row"><span>Status</span><span id="status">ready to connect</span></div>
+</section>
+<section>
+<button id="connect">Connect / switch wallet</button>
+<button id="refresh">Refresh authoritative state</button>
+<pre id="instructions">Connect a wallet to begin.</pre>
+</section>
+<section>
+<button id="activate" disabled>1. Activate challenge</button>
+<button id="submit" disabled>2. Submit replication</button>
+<button id="adjudicate" disabled>3. Adjudicate replication</button>
+<button id="settle" disabled>5. Settle replication</button>
+<button id="replay" disabled>6. Attempt duplicate settlement</button>
+</section>
+<section><h2>Frozen audit configuration</h2><pre id="config">Not read yet.</pre></section>
+<section><h2>Authoritative challenge</h2><pre id="challenge">Not read yet.</pre></section>
+<section><h2>Authoritative replication</h2><pre id="replication">Not read yet.</pre></section>
+<section><h2>Authoritative balances</h2><pre id="balances">Not read yet.</pre></section>
+<section><h2>Transaction log</h2><pre id="log"></pre></section>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ReproBond Phase 0 Native Payout Probe</title>
+    <style>
+      :root { color-scheme: dark; font: 15px/1.45 system-ui, sans-serif; }
+      body { max-width: 980px; margin: 2rem auto; padding: 0 1rem; background: #101318; color: #edf1f7; }
+      h1 { font-size: 1.5rem; }
+      section { border: 1px solid #303846; border-radius: 10px; padding: 1rem; margin: 1rem 0; }
+      button, input { font: inherit; padding: .45rem .65rem; border-radius: 6px; border: 1px solid #526070; }
+      button { cursor: pointer; background: #24364a; color: #fff; margin: .2rem .35rem .2rem 0; }
+      button:hover { background: #31516e; }
+      input { width: min(100%, 560px); background: #171c24; color: #fff; }
+      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      code { overflow-wrap: anywhere; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #0a0d11; padding: .8rem; border-radius: 6px; max-height: 36rem; overflow: auto; }
+      .muted { color: #aab5c4; }
+      .warning { color: #ffd27b; }
+      .ok { color: #8ee6ac; }
+      .bad { color: #ff9292; }
+      .row { display: grid; grid-template-columns: 13rem 1fr; gap: .5rem; margin: .35rem 0; }
+      @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "genlayer-js": "/vendor/genlayer-js/index.js",
+          "viem": "/vendor/viem/_esm/index.js",
+          "viem/accounts": "/vendor/viem/_esm/accounts/index.js",
+          "abitype": "/vendor/abitype/dist/esm/exports/index.js",
+          "@noble/hashes/": "/vendor/noble-hashes/esm/",
+          "@noble/curves/": "/vendor/noble-curves/esm/",
+          "@scure/base": "/vendor/scure-base/lib/esm/index.js",
+          "@scure/bip32": "/vendor/scure-bip32/lib/esm/index.js",
+          "@scure/bip39": "/vendor/scure-bip39/esm/index.js",
+          "@scure/bip39/": "/vendor/scure-bip39/esm/",
+          "ox": "/vendor/ox/_esm/index.js",
+          "ox/erc4337": "/vendor/ox/_esm/erc4337/index.js",
+          "ox/erc4337/": "/vendor/ox/_esm/erc4337/",
+          "ox/erc6492": "/vendor/ox/_esm/erc6492/index.js",
+          "ox/erc6492/": "/vendor/ox/_esm/erc6492/",
+          "ox/erc7821": "/vendor/ox/_esm/erc7821/index.js",
+          "ox/erc7821/": "/vendor/ox/_esm/erc7821/",
+          "ox/erc8010": "/vendor/ox/_esm/erc8010/index.js",
+          "ox/erc8010/": "/vendor/ox/_esm/erc8010/",
+          "ox/erc8021": "/vendor/ox/_esm/erc8021/index.js",
+          "ox/erc8021/": "/vendor/ox/_esm/erc8021/",
+          "ox/tempo": "/vendor/ox/_esm/tempo/index.js",
+          "ox/tempo/": "/vendor/ox/_esm/tempo/",
+          "ox/": "/vendor/ox/_esm/core/",
+          "zod": "/vendor/zod/index.js",
+          "viem/": "/vendor/viem/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <h1>ReproBond Phase 0 — disposable native payout probe</h1>
+    <p class="muted">This page is only a test harness. It does not contain a private key and is not the ReproBond frontend.</p>
+
+    <section>
+      <button id="connect">Connect / switch wallet</button>
+      <button id="refresh">Refresh wallet and reads</button>
+      <div class="row"><span>Wallet address</span><code id="wallet">not connected</code></div>
+      <div class="row"><span>Wallet chain</span><code id="chain">unknown</code></div>
+      <div class="row"><span>Expected probe funder</span><code id="funder">0xa35dc047f9937bf668743efbdf8ea93b31a55888</code></div>
+      <div class="row"><span>Recipient wallet B</span><input id="recipient" value="0x30fd7e8539a8462591e62894739c6864e9b81fa2" /></div>
+      <div class="row"><span>Test amount (wei)</span><input id="amount" value="1000000000000" inputmode="numeric" /></div>
+    </section>
+
+    <section>
+      <h2>Authoritative reads</h2>
+      <div id="balances" class="muted">Connect the wallet to read balances.</div>
+      <pre id="state">No state evidence yet.</pre>
+    </section>
+
+    <section>
+      <h2>Ordered test actions</h2>
+      <p class="muted">Recommended order: fund → insufficient-balance rejection → unauthorized rejection with a different wallet → switch back to the funder → payout → duplicate payout rejection.</p>
+      <button id="fund" disabled>1. Fund probe</button>
+      <button id="insufficient" disabled>2. Test insufficient payout</button>
+      <button id="unauthorized" disabled>3. Test unauthorized payout</button>
+      <button id="payout" disabled>4. Payout exact amount</button>
+      <button id="replay" disabled>5. Replay payout</button>
+    </section>
+
+    <section>
+      <h2>Evidence log</h2>
+      <button id="download">Download evidence JSON</button>
+      <pre id="log"></pre>
+    </section>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

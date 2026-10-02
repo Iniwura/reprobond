@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+*.log
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.vercel/
+frontend/.env
+frontend/.env.*
+!.env.example
+
+**/node_modules/
+phase0-browser-probe/vendor/
+production-audit-runner/test
+# Local tooling
+.DS_Store
+*.orig
+live-audit-runner/node_modules

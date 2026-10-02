@@ -1,0 +1,27 @@
+{
+  "network": {
+    "name": "Studio Dev",
+    "chainId": 61997
+  },
+  "contract": "0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc",
+  "challengeId": "live-contradiction-20260930-a",
+  "fundingTransaction": {
+    "hash": "0x67f110383c4f11e121f077ce454c98389e83ac290f89f8b446eb37ddf9c9a237",
+    "status": "FINALIZED",
+    "executionResult": "FINISHED_WITH_RETURN",
+    "sponsor": "0xa35dc047f9937bf668743efbdf8ea93b31a55888",
+    "userValueWei": "3000000000000",
+    "feeValueWei": "378547200010352",
+    "destination": "0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc"
+  },
+  "authoritativeChallengeRead": {
+    "state": "FUNDED",
+    "escrowFundedWei": "3000000000000",
+    "expectedEscrowWei": "3000000000000",
+    "sponsor": "0xa35dc047f9937bf668743efbdf8ea93b31a55888",
+    "qualifiedCount": 0,
+    "paidCount": 0,
+    "aggregateResult": "NOT_READY"
+  },
+  "source": "Studio Dev sim_getTransactionsForAddress and get_challenge latest-nonfinal"
+}
