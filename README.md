@@ -46,9 +46,9 @@ flowchart LR
   IC -->|PASS only | Payout[native GEN reward to stored replicator]
 ~~~
 
-The deployed production contract is intentionally unchanged by the product build.
+The historical v1 contract is preserved for audit reference. The corrected contract is deployed separately only after the revised source passes local and live verification.
 
-## Audited deployment
+## Historical v1 deployment
 
 - Contract: 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc
 - Network: Studio Dev, chain 61997
@@ -88,3 +88,12 @@ Contract checks are documented in docs/DEPLOYMENT_AUDIT.md.
 - Treat fetched evidence and model output as untrusted.
 - Verify the authoritative challenge and replication state immediately before every write.
 - The app does not export or request private keys.
+
+
+## Corrected deployment status
+
+The reviewer-correction candidate is a new source revision and must use a new Studio Dev address. It is not represented as current production until deployment and fresh live verification complete.
+
+- Candidate source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
+- Historical v1 address: 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc
+- Reviewer corrections: docs/REVIEWER_CORRECTIONS.md

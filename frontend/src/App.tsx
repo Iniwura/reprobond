@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { defaultContractDeadline, isContractDeadlineReached, normalizeContractDeadline } from './deadlines'
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   CHAIN_HEX,
@@ -217,13 +218,53 @@ function Challenges() {
 function ChallengeDetail() {
   const { id = LIVE_CHALLENGE_ID } = useParams()
   const state = useChallengeState(id)
-  return <ReadState state={state}>{({ challenge, ids, replications }: ChallengeState) => (
-    <>
+  const { address, chainId } = useWallet()
+  const writer = useWrite(state.refresh)
+  const [localError, setLocalError] = useState('')
+
+  const expire = async () => {
+    setLocalError('')
+    try {
+      const fresh = await readChallengeState(id)
+      const current = fresh.challenge
+      const pending = fresh.replications.filter((item: any) => item.state === 'SUBMITTED' || (item.state === 'UNRESOLVED' && Number(item.revision) <= 2))
+      if (current.state !== 'OPEN' || !sameAddress(address, current.sponsor)) throw new Error('Authoritative state must be OPEN and the connected wallet must be the sponsor.')
+      if (!isContractDeadlineReached(String(current.deadline_utc))) throw new Error('The frozen deadline has not been reached yet.')
+      if (Number(current.qualified_count) >= Number(current.required_slot_count)) throw new Error('A complete challenge cannot use the partial expiry path.')
+      if (pending.length) throw new Error('Pending SUBMITTED or repairable UNRESOLVED work blocks closure.')
+      await writer.run('expire_challenge', [id])
+    } catch (error) { setLocalError(errorMessage(error)) }
+  }
+
+  const refund = async () => {
+    setLocalError('')
+    try {
+      const fresh = await readChallengeState(id)
+      const current = fresh.challenge
+      const unpaidPasses = fresh.replications.filter((item: any) => item.state === 'PASS')
+      if (current.state !== 'EXPIRED' || !sameAddress(address, current.sponsor)) throw new Error('Authoritative state must be EXPIRED and the connected wallet must be the sponsor.')
+      if (unpaidPasses.length) throw new Error('Every earned PASS reward must be settled before refund.')
+      await writer.run('refund_unused', [id])
+    } catch (error) { setLocalError(errorMessage(error)) }
+  }
+
+  return <ReadState state={state}>{({ challenge, ids, replications }: ChallengeState) => {
+    const records = arr(replications, [])
+    const requiredSlots = Number(challenge.required_slot_count || 0)
+    const qualifiedSlots = Number(challenge.qualified_count || 0)
+    const pending = records.filter((item: any) => item.state === 'SUBMITTED' || (item.state === 'UNRESOLVED' && Number(item.revision) <= 2))
+    const unpaidPasses = records.filter((item: any) => item.state === 'PASS').length
+    const paidRecords = records.filter((item: any) => item.state === 'PAID').length
+    const deadlineReached = isContractDeadlineReached(String(challenge.deadline_utc))
+    const sponsorOnChain = sameAddress(address, challenge.sponsor) && chainId === CHAIN_HEX
+    const canExpire = sponsorOnChain && challenge.state === 'OPEN' && deadlineReached && qualifiedSlots < requiredSlots && pending.length === 0 && writer.status.stage === 'idle'
+    const canRefund = sponsorOnChain && challenge.state === 'EXPIRED' && unpaidPasses === 0 && paidRecords === Number(challenge.paid_count || 0) && writer.status.stage === 'idle'
+    return <>
       <PageIntro marker="CHALLENGE DOSSIER / AUTHORITATIVE" title={String(challenge.challenge_id)} copy={String(challenge.claim || LIVE_CLAIM)} action={<Link className="button button-quiet" to="/submit">Submit a replication →</Link>} />
       <div className="detail-meta">
         <Meta label="STATE"><StateTag value={challenge.state} /></Meta>
         <Meta label="ESCROW" value={formatGen(BigInt(challenge.escrow_funded || 0))} />
-        <Meta label="SLOTS" value={String(challenge.qualified_count || 0) + ' / ' + String(challenge.required_slot_count || 0)} />
+        <Meta label="QUALIFIED SLOTS" value={String(qualifiedSlots) + ' / ' + String(requiredSlots)} />
         <Meta label="REWARD" value={formatGen(BigInt(challenge.reward_per_replication || 0))} />
       </div>
       <div className="detail-grid">
@@ -235,15 +276,21 @@ function ChallengeDetail() {
           <SectionTitle n="03" title="Deterministic result law" />
           <div className="law-card"><div><span className="marker">METRIC</span><strong>{String(challenge.metric_definition)}</strong></div><div><span className="marker">SUPPORT THRESHOLD</span><strong>+{String(challenge.support_threshold_bps)} bps</strong></div><div><span className="marker">CONTRADICTION THRESHOLD</span><strong>{String(challenge.contradiction_threshold_bps)} bps</strong></div><p>Result direction is derived from raw integer runs. It never independently controls payout.</p></div>
           <SectionTitle n="04" title="Replication records" />
-          <div className="challenge-replications">{replications.length ? replications.map((replication: any) => <Link className="challenge-row compact" key={replication.replication_id} to={'/replications/' + encodeURIComponent(id) + '/' + encodeURIComponent(replication.replication_id)}><div className="row-index">↳</div><div><span className="marker">{short(replication.replicator, 10, 8)}</span><h2>{short(replication.replication_id, 14, 10)}</h2></div><div className="row-facts"><span><b>STATE</b><StateTag value={replication.state} /></span><span><b>RESULT</b><StateTag value={replication.result_direction || 'PENDING'} /></span></div><span className="row-arrow">↗</span></Link>) : <p className="muted-copy">No replication records are stored yet. Independent wallets can use the replication form while this challenge is OPEN.</p>}</div>
+          <div className="challenge-replications">{records.length ? records.map((replication: any) => <Link className="challenge-row compact" key={replication.replication_id} to={'/replications/' + encodeURIComponent(id) + '/' + encodeURIComponent(replication.replication_id)}><div className="row-index">↳</div><div><span className="marker">{short(replication.replicator, 10, 8)}</span><h2>{short(replication.replication_id, 14, 10)}</h2></div><div className="row-facts"><span><b>STATE</b><StateTag value={replication.state} /></span><span><b>RESULT</b><StateTag value={replication.result_direction || 'PENDING'} /></span></div><span className="row-arrow">↗</span></Link>) : <p className="muted-copy">No replication records are stored yet. Independent wallets can use the replication form while this challenge is OPEN.</p>}</div>
         </div>
         <aside className="detail-aside">
-          <div className="side-card"><span className="marker">REPLICATION SLOTS</span><div className="slot-rail">{Array.from({ length: Number(challenge.required_slot_count || 0) }, (_, index) => <span className={index < Number(challenge.qualified_count || 0) ? 'filled' : ''} key={index}>{String(index + 1).padStart(2, '0')}</span>)}</div><p>{ids.length} record(s) submitted. {Number(challenge.required_slot_count || 0) - Number(challenge.qualified_count || 0)} qualified slot(s) remain open.</p></div>
+          <div className="side-card"><span className="marker">DEADLINE</span><strong className="mono">{String(challenge.deadline_utc)}</strong>{challenge.state === 'OPEN' && !deadlineReached && <p>Expiry is unavailable until the frozen deadline is reached.</p>}{challenge.state === 'OPEN' && deadlineReached && pending.length > 0 && <p>Closure blocked: {pending.length} SUBMITTED or repairable UNRESOLVED record(s) still need adjudication or repair.</p>}{challenge.state === 'OPEN' && deadlineReached && pending.length === 0 && qualifiedSlots < requiredSlots && <p>No pending work remains. The sponsor may close this partial challenge.</p>}{challenge.state === 'EXPIRED' && <p>{unpaidPasses} unpaid PASS reward(s) remain. Refund becomes available only after they are settled.</p>}{challenge.state === 'REFUNDED' && <p>Final state. Paid rewards remain preserved; only unused escrow was returned.</p>}</div>
+          <div className="side-card"><span className="marker">REPLICATION SLOTS</span><div className="slot-rail">{Array.from({ length: requiredSlots }, (_, index) => <span className={index < qualifiedSlots ? 'filled' : ''} key={index}>{String(index + 1).padStart(2, '0')}</span>)}</div><p>{ids.length} total record(s) submitted. {qualifiedSlots} / {requiredSlots} qualified slot(s) are occupied; {requiredSlots - qualifiedSlots} remain open.</p></div>
           <div className="side-card"><span className="marker">AGGREGATE</span><strong className="aggregate-value">{String(challenge.aggregate_result || 'NOT_READY').replaceAll('_', ' ')}</strong><p>Aggregate vocabulary describes replication directions. It does not label the original claim true or false.</p></div>
+          {canExpire && <button className="button button-dark full" onClick={() => void expire()}>Expire / close challenge</button>}
+          {challenge.state === 'OPEN' && deadlineReached && pending.length > 0 && <div className="tx-notice bad"><strong>Closure blocked by pending work.</strong><span>Resolve every SUBMITTED record and every repairable UNRESOLVED revision first.</span></div>}
+          {challenge.state === 'EXPIRED' && <div className="side-card"><span className="marker">SPONSOR REFUND</span><strong>{formatGen(BigInt(challenge.escrow_funded || 0) - BigInt(challenge.paid_total || 0))} unused</strong><p>Paid rewards: {formatGen(BigInt(challenge.paid_total || 0))}. Earned PASS rewards cannot be reclaimed.</p>{canRefund && <button className="button button-dark full" onClick={() => void refund()}>Refund unused escrow</button>}</div>}
+          {localError && <div className="inline-error">{localError}</div>}
+          {writer.status.stage !== 'idle' && <TxNotice status={writer.status} />}
         </aside>
       </div>
     </>
-  )}</ReadState>
+  }}</ReadState>
 }
 function ReplicationDetail() {
   const params = useParams()
@@ -287,7 +334,7 @@ function SubmitReplication() {
       if (!address || sameAddress(address, challenge.sponsor)) throw new Error('The sponsor cannot submit a replication. Switch to an independent wallet.')
       if (chainId !== CHAIN_HEX) throw new Error('Studio Dev chain ' + CHAIN_ID + ' is required.')
       const ids = state.data?.ids || []
-      if (ids.length >= Number(challenge.required_slot_count)) throw new Error('All replication slots are occupied.')
+      if (Number(challenge.qualified_count) >= Number(challenge.required_slot_count)) throw new Error('All qualified slots are occupied.')
       if (!parsed) throw new Error('Raw arrays must contain 2–16 non-negative integers within the contract bound.')
       const manifest = validateManifest(manifestText, challenge.evidence_requirements)
       await writer.run('submit_replication', [challengeId.trim(), manifest, parsed.baseline, parsed.candidate])
@@ -333,7 +380,7 @@ function CreateChallenge() {
       if (!Number.isInteger(slotCount) || slotCount < 1 || slotCount > 16 || rewardWei <= 0n) throw new Error('Slots must be 1–16 and reward must be positive.')
       if (!Number.isInteger(Number(support)) || !Number.isInteger(Number(contradiction)) || Number(support) <= Number(contradiction)) throw new Error('Thresholds must be integers with support above contradiction.')
       const escrow = BigInt(slotCount) * rewardWei
-      await writer.run('create_challenge', [id.trim(), claim.trim(), protocol, requirements, 'candidate_relative_change_bps.v1', Number(support), Number(contradiction), slotCount, rewardWei, deadline || new Date(Date.now() + 30 * 86400000).toISOString()])
+      await writer.run('create_challenge', [id.trim(), claim.trim(), protocol, requirements, 'candidate_relative_change_bps.v1', Number(support), Number(contradiction), slotCount, rewardWei, normalizeContractDeadline(deadline || defaultContractDeadline())])
       setCreatedId(id.trim())
       setCreatedEscrow(escrow)
     } catch (nextError) { setError(errorMessage(nextError)) }
@@ -355,7 +402,7 @@ function CreateChallenge() {
       await writer.run('activate_challenge', [createdId])
     } catch (nextError) { setError(errorMessage(nextError)) }
   }
-  return <><PageIntro marker="04 / SPONSOR WORKFLOW" title="Freeze a question worth reproducing." copy="A challenge is a compact public contract: claim, criteria, evidence, metric, thresholds, slots, reward, deadline. Every field becomes immutable after creation." /><div className="form-layout"><section className="form-surface"><label><span className="marker">CHALLENGE ID</span><input value={id} onChange={(event) => setId(event.target.value)} placeholder="e.g. runtime-benchmark-2026-a" /></label><label><span className="marker">CLAIM</span><textarea value={claim} onChange={(event) => setClaim(event.target.value)} rows={3} placeholder="Optimization X improves…" /></label><label><span className="marker">PROTOCOL CRITERIA / JSON</span><textarea className="code-input" value={criteria} onChange={(event) => setCriteria(event.target.value)} rows={10} spellCheck={false} /></label><label><span className="marker">EVIDENCE REQUIREMENTS / JSON</span><textarea className="code-input" value={evidence} onChange={(event) => setEvidence(event.target.value)} rows={6} spellCheck={false} /></label><div className="input-grid"><label><span className="marker">SUPPORT BPS</span><input value={support} onChange={(event) => setSupport(event.target.value)} inputMode="numeric" /></label><label><span className="marker">CONTRADICTION BPS</span><input value={contradiction} onChange={(event) => setContradiction(event.target.value)} inputMode="numeric" /></label><label><span className="marker">SLOTS</span><input value={slots} onChange={(event) => setSlots(event.target.value)} inputMode="numeric" /></label><label><span className="marker">REWARD / SLOT (WEI)</span><input value={reward} onChange={(event) => setReward(event.target.value)} inputMode="numeric" /></label></div><label><span className="marker">DEADLINE UTC</span><input value={deadline} onChange={(event) => setDeadline(event.target.value)} placeholder="2026-12-31T00:00:00Z" /></label>{error && <div className="inline-error">{error}</div>}{writer.status.stage !== 'idle' && <TxNotice status={writer.status} />}{createdId && <div className="tx-notice good"><strong>Challenge created: {createdId}</strong><span>{created ? 'Authoritative state: ' + created.state + '. Escrow: ' + formatGen(BigInt(created.escrow_funded || 0)) + '.' : 'Refreshing the new record…'}</span></div>}<div className="button-row"><button className="button button-dark" disabled={!address || chainId !== CHAIN_HEX || writer.status.stage !== 'idle'} onClick={() => void create()}>Create challenge</button><button className="button button-outline" disabled={!createdId || !created || created.state !== 'DRAFT' || writer.status.stage !== 'idle'} onClick={() => void fund()}>Fund exact escrow</button><button className="button button-outline" disabled={!createdId || !created || created.state !== 'FUNDED' || writer.status.stage !== 'idle'} onClick={() => void activate()}>Activate</button></div></section><aside className="side-note"><span className="marker">THE SPONSOR SEQUENCE</span><ol className="plain-steps"><li>Draft the immutable record</li><li>Fund every required slot</li><li>Activate for independent replication</li></ol><hr /><span className="marker">CONNECTED WALLET</span><strong>{address ? short(address, 10, 8) : 'NOT CONNECTED'}</strong><p>Creating a challenge records the connected wallet as sponsor. Funding requires the exact computed escrow, refreshed from authoritative state.</p></aside></div></>
+  return <><PageIntro marker="04 / SPONSOR WORKFLOW" title="Freeze a question worth reproducing." copy="A challenge is a compact public contract: claim, criteria, evidence, metric, thresholds, slots, reward, deadline. Every field becomes immutable after creation." /><div className="form-layout"><section className="form-surface"><label><span className="marker">CHALLENGE ID</span><input value={id} onChange={(event) => setId(event.target.value)} placeholder="e.g. runtime-benchmark-2026-a" /></label><label><span className="marker">CLAIM</span><textarea value={claim} onChange={(event) => setClaim(event.target.value)} rows={3} placeholder="Optimization X improves…" /></label><label><span className="marker">PROTOCOL CRITERIA / JSON</span><textarea className="code-input" value={criteria} onChange={(event) => setCriteria(event.target.value)} rows={10} spellCheck={false} /></label><label><span className="marker">EVIDENCE REQUIREMENTS / JSON</span><textarea className="code-input" value={evidence} onChange={(event) => setEvidence(event.target.value)} rows={6} spellCheck={false} /></label><div className="input-grid"><label><span className="marker">SUPPORT BPS</span><input value={support} onChange={(event) => setSupport(event.target.value)} inputMode="numeric" /></label><label><span className="marker">CONTRADICTION BPS</span><input value={contradiction} onChange={(event) => setContradiction(event.target.value)} inputMode="numeric" /></label><label><span className="marker">SLOTS</span><input value={slots} onChange={(event) => setSlots(event.target.value)} inputMode="numeric" /></label><label><span className="marker">REWARD / SLOT (WEI)</span><input value={reward} onChange={(event) => setReward(event.target.value)} inputMode="numeric" /></label></div><label><span className="marker">DEADLINE UTC</span><input type="datetime-local" value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>{error && <div className="inline-error">{error}</div>}{writer.status.stage !== 'idle' && <TxNotice status={writer.status} />}{createdId && <div className="tx-notice good"><strong>Challenge created: {createdId}</strong><span>{created ? 'Authoritative state: ' + created.state + '. Escrow: ' + formatGen(BigInt(created.escrow_funded || 0)) + '.' : 'Refreshing the new record…'}</span></div>}<div className="button-row"><button className="button button-dark" disabled={!address || chainId !== CHAIN_HEX || writer.status.stage !== 'idle'} onClick={() => void create()}>Create challenge</button><button className="button button-outline" disabled={!createdId || !created || created.state !== 'DRAFT' || writer.status.stage !== 'idle'} onClick={() => void fund()}>Fund exact escrow</button><button className="button button-outline" disabled={!createdId || !created || created.state !== 'FUNDED' || writer.status.stage !== 'idle'} onClick={() => void activate()}>Activate</button></div></section><aside className="side-note"><span className="marker">THE SPONSOR SEQUENCE</span><ol className="plain-steps"><li>Draft the immutable record</li><li>Fund every required slot</li><li>Activate for independent replication</li></ol><hr /><span className="marker">CONNECTED WALLET</span><strong>{address ? short(address, 10, 8) : 'NOT CONNECTED'}</strong><p>Creating a challenge records the connected wallet as sponsor. Funding requires the exact computed escrow, refreshed from authoritative state.</p></aside></div></>
 }
 
 function AuditPage() {
@@ -372,7 +419,9 @@ function parseRuns(left: string, right: string) { try { const baseline = left.sp
 function validateManifest(text: string, requirements: unknown) {
   const manifest = JSON.parse(text)
   if (!Array.isArray(manifest) || !manifest.length) throw new Error('Manifest must be a non-empty JSON array.')
-  const expected = arr(requirements, []).map((item: any) => String(item.evidence_id))
+  const requirementItems = arr(requirements, [])
+  const expected = requirementItems.map((item: any) => String(item.evidence_id))
+  const required = requirementItems.filter((item: any) => item.required === true).map((item: any) => String(item.evidence_id))
   const seen = new Set<string>()
   for (const item of manifest) {
     if (!item || typeof item !== 'object' || typeof item.evidence_id !== 'string' || typeof item.url !== 'string' || typeof item.sha256 !== 'string') throw new Error('Each manifest item must contain evidence_id, url, and sha256.')
@@ -382,7 +431,7 @@ function validateManifest(text: string, requirements: unknown) {
     if (!/^https:\/\//i.test(item.url)) throw new Error('Evidence URLs must use HTTPS.')
     if (!/^[a-f0-9]{64}$/i.test(item.sha256)) throw new Error('Evidence SHA-256 values must be exactly 64 hexadecimal characters.')
   }
-  for (const evidenceId of expected) if (!seen.has(evidenceId)) throw new Error('Missing required evidence ID: ' + evidenceId)
+  for (const evidenceId of required) if (!seen.has(evidenceId)) throw new Error('Missing required evidence ID: ' + evidenceId)
   return manifest
 }
 function truncZero(numerator: number, denominator: number) { return numerator >= 0 ? Math.floor(numerator / denominator) : -Math.floor(-numerator / denominator) }

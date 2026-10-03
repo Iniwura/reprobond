@@ -30,3 +30,8 @@ The contract settlement path checks fidelity state and the stored reward entitle
 ## Scope
 
 ReproBond is a bounded protocol for reproducible quantitative/computational claims. It is not universal scientific verification and it does not label claims TRUE, FALSE, PROVEN, or DISPROVEN.
+
+
+## Reviewer corrections
+
+The corrected release is intentionally a new deployment, not a patch to the historical address. It adds deterministic transaction-time deadline enforcement, blocks pending-work expiry, preserves earned PASS rewards through partial closure, refunds only unused escrow after PASS payouts, honors optional evidence, and uses qualified_count for slot capacity. Final submission identifiers must be filled only from authoritative Studio Dev reads after the new deployment.

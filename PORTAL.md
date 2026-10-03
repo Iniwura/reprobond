@@ -25,3 +25,8 @@ Studio Dev chain 61997, production contract 0x8F1CeC7cbf0D651561B5ec11049257e642
 ## Important limitation
 
 ReproBond reports a replication record and deterministic result. It does not claim universal scientific truth.
+
+
+## Deployment labeling
+
+The displayed live proof is Historical v1 until the corrected contract has a fresh Studio Dev deployment and new live scenario evidence. The corrected release enforces deterministic deadlines, safe partial closure/refund, required-vs-optional evidence, and qualified-slot capacity.

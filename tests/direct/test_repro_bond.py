@@ -86,6 +86,7 @@ def create(
     contradiction=THRESHOLD_CONTRADICTION,
     slots=SLOTS,
     reward=REWARD,
+    deadline=DEADLINE,
 ):
     direct_vm.sender = sponsor
     direct_vm.value = 0
@@ -99,17 +100,21 @@ def create(
         contradiction,
         slots,
         reward,
-        DEADLINE,
+        deadline,
     )
 
 
-def fund_and_open(contract, direct_vm, sponsor, slots=SLOTS, reward=REWARD):
-    create(contract, direct_vm, sponsor, slots=slots, reward=reward)
+def fund_and_open(contract, direct_vm, sponsor, slots=SLOTS, reward=REWARD, deadline=DEADLINE):
+    create(contract, direct_vm, sponsor, slots=slots, reward=reward, deadline=deadline)
     direct_vm.sender = sponsor
     direct_vm.value = slots * reward
     contract.fund_challenge(CHALLENGE)
     direct_vm.value = 0
     contract.activate_challenge(CHALLENGE)
+
+
+def advance_to_deadline(direct_vm):
+    direct_vm.warp("2099-01-01T00:00:00Z")
 
 
 def mock_evidence(direct_vm, bodies=None):
@@ -900,6 +905,7 @@ def test_expiry_of_unfinished_challenge_and_unused_refund(
     fund_and_open(contract, direct_vm, direct_alice)
     spy = install_transfer_spy(contract, monkeypatch)
     direct_vm.sender = direct_alice
+    advance_to_deadline(direct_vm)
     contract.expire_challenge(CHALLENGE)
     assert contract.get_challenge(CHALLENGE)["state"] == "EXPIRED"
     refunded = contract.refund_unused(CHALLENGE)
@@ -908,7 +914,7 @@ def test_expiry_of_unfinished_challenge_and_unused_refund(
     assert contract.get_challenge(CHALLENGE)["state"] == "REFUNDED"
 
 
-def test_expiry_blocked_after_contradictory_pass(
+def test_partial_contradictory_pass_can_expire_after_deadline(
     direct_deploy,
     direct_vm,
     direct_alice,
@@ -920,8 +926,9 @@ def test_expiry_blocked_after_contradictory_pass(
     mock_fidelity(direct_vm)
     adjudicate(contract, direct_vm, replication_id)
     direct_vm.sender = direct_alice
-    with direct_vm.expect_revert("qualified replication"):
-        contract.expire_challenge(CHALLENGE)
+    advance_to_deadline(direct_vm)
+    contract.expire_challenge(CHALLENGE)
+    assert contract.get_challenge(CHALLENGE)["state"] == "EXPIRED"
 
 
 def test_completed_challenge_cannot_refund_paid_slots(
@@ -955,6 +962,7 @@ def test_duplicate_refund_rejected(
     fund_and_open(contract, direct_vm, direct_alice)
     install_transfer_spy(contract, monkeypatch)
     direct_vm.sender = direct_alice
+    advance_to_deadline(direct_vm)
     contract.expire_challenge(CHALLENGE)
     contract.refund_unused(CHALLENGE)
     with direct_vm.expect_revert():
@@ -1063,3 +1071,286 @@ def test_manifest_exact_schema(
     fund_and_open(contract, direct_vm, direct_alice)
     with direct_vm.expect_revert():
         submit(contract, direct_vm, direct_bob, manifest=bad_manifest)
+
+
+def test_create_rejects_past_or_equal_deadline(direct_deploy, direct_vm, direct_alice):
+    contract = deploy(direct_deploy)
+    advance_to_deadline(direct_vm)
+    with direct_vm.expect_revert("strictly in the future"):
+        create(contract, direct_vm, direct_alice, deadline=DEADLINE)
+
+
+def test_funding_after_deadline_rejected(direct_deploy, direct_vm, direct_alice):
+    contract = deploy(direct_deploy)
+    create(contract, direct_vm, direct_alice)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    direct_vm.value = SLOTS * REWARD
+    with direct_vm.expect_revert("funding is closed"):
+        contract.fund_challenge(CHALLENGE)
+
+
+def test_activation_after_deadline_rejected(direct_deploy, direct_vm, direct_alice):
+    contract = deploy(direct_deploy)
+    create(contract, direct_vm, direct_alice)
+    direct_vm.sender = direct_alice
+    direct_vm.value = SLOTS * REWARD
+    contract.fund_challenge(CHALLENGE)
+    direct_vm.value = 0
+    advance_to_deadline(direct_vm)
+    with direct_vm.expect_revert("activation is closed"):
+        contract.activate_challenge(CHALLENGE)
+
+
+def test_new_submission_after_deadline_rejected(direct_deploy, direct_vm, direct_alice, direct_bob):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    advance_to_deadline(direct_vm)
+    with direct_vm.expect_revert("new replication submissions is closed"):
+        submit(contract, direct_vm, direct_bob)
+
+
+def test_pre_deadline_submission_remains_adjudicable_after_deadline(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    advance_to_deadline(direct_vm)
+    mock_fidelity(direct_vm)
+    result = adjudicate(contract, direct_vm, replication_id)
+    assert result["state"] == "PASS"
+
+
+def test_unresolved_repair_remains_possible_after_deadline(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm, ["SATISFIED", "UNRESOLVED", "SATISFIED"])
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_bob
+    contract.repair_unresolved(CHALLENGE, replication_id, MANIFEST, [100, 100], [110, 110])
+    assert record(contract, replication_id)["state"] == "SUBMITTED"
+
+
+def test_expiry_before_deadline_rejected(direct_deploy, direct_vm, direct_alice):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("deadline has not been reached"):
+        contract.expire_challenge(CHALLENGE)
+
+
+def test_expiry_with_submitted_replication_rejected(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    submit(contract, direct_vm, direct_bob)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("SUBMITTED replication"):
+        contract.expire_challenge(CHALLENGE)
+
+
+def test_expiry_with_repairable_unresolved_replication_rejected(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm, ["SATISFIED", "UNRESOLVED", "SATISFIED"])
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("repairable UNRESOLVED"):
+        contract.expire_challenge(CHALLENGE)
+
+
+def test_partial_pass_challenge_can_expire_after_deadline(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=2)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    assert contract.get_challenge(CHALLENGE)["state"] == "EXPIRED"
+
+
+def test_unpaid_pass_remains_settleable_after_expiry(
+    direct_deploy, direct_vm, direct_alice, direct_bob, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=2)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    spy = install_transfer_spy(contract, monkeypatch)
+    direct_vm.sender = direct_bob
+    contract.settle_replication(CHALLENGE, replication_id)
+    assert spy.calls[-1] == ("0x" + direct_bob.hex(), REWARD)
+    assert record(contract, replication_id)["state"] == "PAID"
+
+
+def test_refund_blocked_while_pass_unpaid(
+    direct_deploy, direct_vm, direct_alice, direct_bob, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=2)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    install_transfer_spy(contract, monkeypatch)
+    with direct_vm.expect_revert("PASS replications"):
+        contract.refund_unused(CHALLENGE)
+
+
+def test_partial_pass_refunds_only_unused_escrow(
+    direct_deploy, direct_vm, direct_alice, direct_bob, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=2)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    install_transfer_spy(contract, monkeypatch)
+    direct_vm.sender = direct_bob
+    contract.settle_replication(CHALLENGE, replication_id)
+    direct_vm.sender = direct_alice
+    refund = contract.refund_unused(CHALLENGE)
+    assert refund == REWARD
+    assert contract.get_challenge(CHALLENGE)["paid_total"] == REWARD
+    assert contract.get_challenge(CHALLENGE)["paid_count"] == 1
+    assert contract.get_challenge(CHALLENGE)["state"] == "REFUNDED"
+
+
+def test_paid_pass_accounting_is_preserved_after_settlement(
+    direct_deploy, direct_vm, direct_alice, direct_bob, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=2)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    install_transfer_spy(contract, monkeypatch)
+    direct_vm.sender = direct_bob
+    contract.settle_replication(CHALLENGE, replication_id)
+    challenge = contract.get_challenge(CHALLENGE)
+    assert challenge["qualified_count"] == 1
+    assert challenge["paid_count"] == 1
+    assert challenge["paid_total"] == REWARD
+
+
+def test_fail_records_do_not_reserve_reward(
+    direct_deploy, direct_vm, direct_alice, direct_bob, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm, ["VIOLATED", "SATISFIED", "SATISFIED"])
+    adjudicate(contract, direct_vm, replication_id)
+    assert record(contract, replication_id)["state"] == "FAIL"
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    install_transfer_spy(contract, monkeypatch)
+    refund = contract.refund_unused(CHALLENGE)
+    assert refund == SLOTS * REWARD
+
+
+def test_optional_evidence_omission_is_accepted(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob, manifest=MANIFEST)
+    assert record(contract, replication_id)["state"] == "SUBMITTED"
+
+
+def test_required_evidence_omission_is_rejected(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    missing = [MANIFEST[0]]
+    with direct_vm.expect_revert("missing required evidence"):
+        submit(contract, direct_vm, direct_bob, manifest=missing)
+
+
+def test_duplicate_expiry_rejected(
+    direct_deploy, direct_vm, direct_alice, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    install_transfer_spy(contract, monkeypatch)
+    with direct_vm.expect_revert("only an incomplete OPEN"):
+        contract.expire_challenge(CHALLENGE)
+
+
+def test_complete_challenge_cannot_use_partial_expiry_path(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=1)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("only an incomplete OPEN"):
+        contract.expire_challenge(CHALLENGE)
+
+
+def test_terminal_unresolved_can_close_without_fake_fail(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    for _ in range(2):
+        mock_fidelity(direct_vm, ["SATISFIED", "UNRESOLVED", "SATISFIED"])
+        adjudicate(contract, direct_vm, replication_id)
+        direct_vm.sender = direct_bob
+        contract.repair_unresolved(CHALLENGE, replication_id, MANIFEST, [100, 100], [110, 110])
+    mock_fidelity(direct_vm, ["SATISFIED", "UNRESOLVED", "SATISFIED"])
+    adjudicate(contract, direct_vm, replication_id)
+    assert record(contract, replication_id)["state"] == "UNRESOLVED"
+    assert record(contract, replication_id)["revision"] == 3
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    assert contract.get_challenge(CHALLENGE)["state"] == "EXPIRED"
+
+
+def test_replay_settlement_remains_rejected(
+    direct_deploy, direct_vm, direct_alice, direct_bob, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=1)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    install_transfer_spy(contract, monkeypatch)
+    direct_vm.sender = direct_bob
+    contract.settle_replication(CHALLENGE, replication_id)
+    with direct_vm.expect_revert("only PASS"):
+        contract.settle_replication(CHALLENGE, replication_id)

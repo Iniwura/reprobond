@@ -3,7 +3,7 @@
 import hashlib
 import ipaddress
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -314,6 +314,32 @@ def _deadline(value: Any) -> str:
     except ValueError:
         raise gl.vm.UserError("deadline_utc is not a valid UTC date.")
     return value
+
+
+def _parse_utc(value: str, field: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        raise gl.vm.UserError(field + " is not a valid UTC timestamp.")
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise gl.vm.UserError(field + " must include a UTC timezone.")
+    return parsed.astimezone(timezone.utc)
+
+
+def _transaction_utc() -> datetime:
+    raw_message = getattr(gl.message, "raw", None)
+    if type(raw_message) is not dict or type(raw_message.get("datetime")) is not str:
+        raise gl.vm.UserError("transaction datetime is unavailable.")
+    return _parse_utc(raw_message["datetime"], "transaction datetime")
+
+
+def _deadline_reached(deadline_utc: str) -> bool:
+    return _transaction_utc() >= _parse_utc(deadline_utc, "deadline_utc")
+
+
+def _require_deadline_open(deadline_utc: str, action: str) -> None:
+    if _deadline_reached(deadline_utc):
+        raise gl.vm.UserError(action + " is closed after the deadline.")
 
 
 def _criteria(value: Any) -> list[dict[str, Any]]:
@@ -823,6 +849,8 @@ class ReproBond(gl.contract.Contract):
         ):
             raise gl.vm.UserError("reward per replication is invalid.")
         deadline_utc = _deadline(deadline_utc)
+        if _deadline_reached(deadline_utc):
+            raise gl.vm.UserError("deadline must be strictly in the future.")
         if self.challenges.get(challenge_id, None) is not None:
             raise gl.vm.UserError("challenge ID already exists.")
 
@@ -879,6 +907,7 @@ class ReproBond(gl.contract.Contract):
         sender = _address(gl.message.sender_address)
         if _address_key(sender) != _address_key(challenge.sponsor):
             raise gl.vm.UserError("only the sponsor may fund this challenge.")
+        _require_deadline_open(challenge.deadline_utc, "funding")
         value = int(gl.message.value)
         if value != int(challenge.expected_escrow):
             raise gl.vm.UserError("funding must equal the exact reward pool.")
@@ -901,6 +930,7 @@ class ReproBond(gl.contract.Contract):
             raise gl.vm.UserError("challenge is not funded.")
         if _address_key(gl.message.sender_address) != _address_key(challenge.sponsor):
             raise gl.vm.UserError("only the sponsor may activate this challenge.")
+        _require_deadline_open(challenge.deadline_utc, "activation")
         if int(challenge.escrow_funded) != int(challenge.expected_escrow):
             raise gl.vm.UserError("challenge escrow is incomplete.")
         challenge.state = OPEN
@@ -924,6 +954,7 @@ class ReproBond(gl.contract.Contract):
         challenge = self._challenge(_identifier(challenge_id, "challenge_id", MAX_CHALLENGE_ID))
         if challenge.state != OPEN:
             raise gl.vm.UserError("challenge is not open for submissions.")
+        _require_deadline_open(challenge.deadline_utc, "new replication submissions")
         sender = _address(gl.message.sender_address)
         sender_key = _address_key(sender)
         if sender_key == _address_key(challenge.sponsor):
@@ -1220,15 +1251,24 @@ class ReproBond(gl.contract.Contract):
             raise gl.vm.UserError("only an incomplete OPEN challenge may expire.")
         if _address_key(gl.message.sender_address) != _address_key(challenge.sponsor):
             raise gl.vm.UserError("only the sponsor may expire this challenge.")
-        if int(challenge.qualified_count) != 0:
-            raise gl.vm.UserError("a qualified replication blocks expiry.")
+        if not _deadline_reached(challenge.deadline_utc):
+            raise gl.vm.UserError("challenge deadline has not been reached.")
+        if int(challenge.qualified_count) >= int(challenge.required_slot_count):
+            raise gl.vm.UserError("completed challenge cannot use partial expiry.")
+        for replication_id in self._challenge_ids(challenge.challenge_id):
+            replication = self._replication(replication_id)
+            if replication.state == SUBMITTED:
+                raise gl.vm.UserError("SUBMITTED replication blocks expiry.")
+            if replication.state == UNRESOLVED and int(replication.revision) <= MAX_REPAIRS:
+                raise gl.vm.UserError("repairable UNRESOLVED replication blocks expiry.")
         challenge.state = EXPIRED
         self.challenges[challenge.challenge_id] = challenge
         return _digest(
-            "REPROBOND-EXPIRY-V1",
+            "REPROBOND-EXPIRY-V2",
             {
                 "challenge_id": challenge.challenge_id,
                 "challenge_fingerprint": challenge.fingerprint,
+                "qualified_count": int(challenge.qualified_count),
             },
         )
 
@@ -1239,13 +1279,26 @@ class ReproBond(gl.contract.Contract):
             raise gl.vm.UserError("only EXPIRED challenges can refund.")
         if _address_key(gl.message.sender_address) != _address_key(challenge.sponsor):
             raise gl.vm.UserError("only the sponsor may refund unused escrow.")
+
+        qualified_records = 0
+        paid_records = 0
         for replication_id in self._challenge_ids(challenge.challenge_id):
             replication = self._replication(replication_id)
             if replication.state == PASS:
                 raise gl.vm.UserError("all PASS replications must be paid first.")
+            if replication.state == PAID:
+                qualified_records += 1
+                paid_records += 1
+        if qualified_records != int(challenge.qualified_count):
+            raise gl.vm.UserError("qualified replication accounting is inconsistent.")
+        if paid_records != int(challenge.paid_count):
+            raise gl.vm.UserError("paid replication accounting is inconsistent.")
+        expected_paid_total = paid_records * int(challenge.reward_per_replication)
+        if expected_paid_total != int(challenge.paid_total):
+            raise gl.vm.UserError("paid reward accounting is inconsistent.")
         refund = int(challenge.escrow_funded) - int(challenge.paid_total)
-        if refund < 0:
-            raise gl.vm.UserError("refund exceeds escrow.")
+        if refund < 0 or refund > int(challenge.escrow_funded):
+            raise gl.vm.UserError("refund exceeds unused escrow.")
         challenge.state = REFUNDED
         self.challenges[challenge.challenge_id] = challenge
         if refund > 0:
