@@ -48,6 +48,17 @@ flowchart LR
 
 The historical v1 contract is preserved for audit reference. The corrected contract is deployed separately only after the revised source passes local and live verification.
 
+## Corrected production deployment
+
+- Contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
+- Network: Studio Dev, chain 61997
+- Contract source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
+- Canonical challenge: reprobond-steward-consolidated-20261007-b
+- Canonical replication: e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e
+- Verified outcome: PASS + -2500 bps + CONTRADICTS -> PAID
+- Native reward: 1 wei; unused escrow refunded: 1 wei
+- Detailed audit: docs/STEWARD_AUDIT_20261007.md
+
 ## Historical v1 deployment
 
 - Contract: 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc
@@ -59,7 +70,8 @@ The historical v1 contract is preserved for audit reference. The corrected contr
 - Reward: 1000000000000 wei
 - Replay: rejected before a second transaction was submitted
 
-The authoritative evidence trail is docs/LIVE_AUDIT_FINAL.md.
+The historical evidence trail is docs/LIVE_AUDIT_FINAL.md. The current
+corrected evidence trail is docs/STEWARD_AUDIT_20261007.md.
 
 ## Local development
 
@@ -90,10 +102,8 @@ Contract checks are documented in docs/DEPLOYMENT_AUDIT.md.
 - The app does not export or request private keys.
 
 
-## Corrected deployment status
+## Steward corrections
 
-The reviewer-correction candidate is a new source revision and must use a new Studio Dev address. It is not represented as current production until deployment and fresh live verification complete.
-
-- Candidate source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
-- Historical v1 address: 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc
-- Reviewer corrections: docs/REVIEWER_CORRECTIONS.md
+The corrected source is deployed at the new address above. The old address
+0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc remains historical v1 only.
+Reviewer corrections are documented in docs/REVIEWER_CORRECTIONS.md.

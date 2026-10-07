@@ -16,9 +16,9 @@ code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{overflow-w
 <section>
 <div class="row"><span>Wallet</span><code id="wallet">not connected</code></div>
 <div class="row"><span>Chain</span><code id="chain">unknown</code></div>
-<div class="row"><span>Contract</span><code>0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc</code></div>
-<div class="row"><span>Challenge</span><code>reprobond-corrected-20261001-a</code></div>
-<div class="row"><span>Derived replication ID</span><code id="replicationId">d3dfda779724b60dacba75d35ba1ec260c0f82898facc9a610e404452606f5e4</code></div>
+<div class="row"><span>Contract</span><code>0x897a7dF67E638506557985FE795Ff2F762f01607</code></div>
+<div class="row"><span>Challenge</span><code>reprobond-steward-20261007-a</code></div>
+<div class="row"><span>Derived replication ID</span><code id="replicationId">8432507f735155e812f7b4fba27177a765c0199fe3f788a9c8cfada9e31b3831</code></div>
 <div class="row"><span>Status</span><span id="status">ready to connect</span></div>
 </section>
 <section>
@@ -27,13 +27,31 @@ code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{overflow-w
 <pre id="instructions">Connect a wallet to begin.</pre>
 </section>
 <section>
+<button id="create" disabled>0. Create challenge</button>
+<button id="fund" disabled>0. Fund exact escrow</button>
 <button id="activate" disabled>1. Activate challenge</button>
 <button id="submit" disabled>2. Submit replication</button>
+<button id="expire" disabled>4. Attempt expiry (SUBMITTED guard)</button>
 <button id="adjudicate" disabled>3. Adjudicate replication</button>
 <button id="settle" disabled>5. Settle replication</button>
 <button id="replay" disabled>6. Attempt duplicate settlement</button>
 </section>
-<section><h2>Frozen audit configuration</h2><pre id="config">Not read yet.</pre></section>
+<section><h2>Frozen audit configuration</h2><pre id="config">Not read yet.</pre></section><section><h2>Consolidated short-deadline scenario</h2>
+<p class="muted">This scenario consolidates the remaining Steward proofs into one two-slot challenge. It is already created on-chain with a 2 wei escrow requirement. Only funding is exposed here; every later audit write uses zero user value through the verified CLI path.</p>
+<div class="row"><span>Consolidated challenge ID</span><code id="shortChallengeId">reprobond-steward-consolidated-20261007-a</code></div>
+<div class="row"><span>Studio time used at prep</span><code id="shortStudioTime">2026-10-07T21:24:17Z</code></div>
+<div class="row"><span>Exact deadline</span><code id="shortDeadline">2026-10-07T22:04:17Z</code></div>
+<div class="row"><span>Current state</span><code id="shortState">not created</code></div>
+<div class="row"><span>Escrow</span><code id="shortEscrow">2 wei required / 0 wei funded</code></div>
+<div class="row"><span>Derived replication ID</span><code id="shortReplicationId">621e3ac7f3a02ab8cd976a350ccdc66f9ec79ce765df94bff4295de23ac8cbaa</code></div>
+<div class="row"><span>Scenario state</span><pre id="shortScenarioState">Not read yet.</pre></div>
+<div class="row"><span>Scenario status</span><span id="shortScenarioStatus">Consolidated challenge created; connect sponsor and click Fund consolidated challenge.</span></div>
+<button id="shortCreate" disabled>Create consolidated challenge (already on-chain)</button>
+<button id="shortFund" disabled>Fund consolidated challenge — exact 2 wei</button>
+<button id="shortActivate" disabled>Activate consolidated challenge (CLI later)</button>
+<button id="shortSubmit" disabled>Submit consolidated replication (CLI later)</button>
+</section>
+
 <section><h2>Authoritative challenge</h2><pre id="challenge">Not read yet.</pre></section>
 <section><h2>Authoritative replication</h2><pre id="replication">Not read yet.</pre></section>
 <section><h2>Authoritative balances</h2><pre id="balances">Not read yet.</pre></section>

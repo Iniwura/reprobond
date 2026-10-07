@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReproBond — Studio Dev deployment</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    body { margin: 0; padding: 28px; background:#11120f; color:#e9e6d7; }
+    main { max-width: 980px; margin:auto; }
+    h1 { font: 600 30px Georgia, serif; margin:0 0 8px; }
+    p { color:#aaa897; }
+    .meta { display:grid; grid-template-columns: 160px 1fr; gap:8px 16px; padding:18px; border:1px solid #383a31; border-radius:12px; background:#191a15; }
+    button { margin:18px 10px 0 0; border:1px solid #b9c98a; color:#11120f; background:#b9c98a; padding:12px 16px; border-radius:7px; font-weight:700; cursor:pointer; }
+    button.secondary { background:transparent; color:#b9c98a; }
+    button:disabled { opacity:.4; cursor:not-allowed; }
+    pre { white-space:pre-wrap; overflow:auto; margin-top:18px; padding:18px; border:1px solid #383a31; border-radius:12px; background:#090a08; color:#d6d2be; min-height:260px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>ReproBond / corrected deployment</h1>
+  <p>Disposable deployment boundary. No application action is submitted until the deploy button is clicked and approved in Rabby.</p>
+  <section class="meta">
+    <strong>Network</strong><span>Studio Dev · chain 61997</span>
+    <strong>Sponsor required</strong><span>0xa35dc047f9937bf668743efbdf8ea93b31a55888</span>
+    <strong>Source SHA</strong><span id="source-sha">computing…</span>
+    <strong>Source bytes</strong><span id="source-bytes">computing…</span>
+    <strong>Provider</strong><span id="provider">discovering...</span><strong>Wallet</strong><span id="wallet">not connected</span>
+  </section>
+  <label for="provider-select">Use detected provider</label>
+  <select id="provider-select" disabled><option>discovering...</option></select>
+  <br />
+  <button id="connect">Connect / verify sponsor</button>
+  <button id="estimate" class="secondary" disabled>Refresh fee estimate</button>
+  <button id="deploy" disabled>Deploy corrected contract</button>
+  <pre id="log"></pre>
+</main>
+<script type="module" src="/src/deploy.ts"></script>
+</body>
+</html>

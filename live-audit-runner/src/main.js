@@ -1,21 +1,65 @@
 import { createClient, isSuccessful } from "genlayer-js";
 import { studioDevnet } from "genlayer-js/chains";
 
-const CONTRACT = "0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc";
-const CHALLENGE_ID = "reprobond-corrected-20261001-a";
+const CONTRACT = "0x897a7dF67E638506557985FE795Ff2F762f01607";
+const CHALLENGE_ID = "reprobond-steward-20261007-a";
 const SPONSOR = "0xa35dc047f9937bf668743efbdf8ea93b31a55888";
 const REPLICATOR = "0xd0dd02322AF812fC0dbDdC69f9a055FBBe2C6673";
 const CHAIN_ID = studioDevnet.id;
 const CHAIN_HEX = "0x" + CHAIN_ID.toString(16);
-const DEPLOYED_SOURCE_SHA256 = "0471c6c4f014499a7b1537be7b9b5952aa750d2a220903b5c623bb088d193fbc";
-const REPLICATION_ID = "d3dfda779724b60dacba75d35ba1ec260c0f82898facc9a610e404452606f5e4";
-const REPLICATION_ID_CANONICAL = "[\"REPROBOND-REPLICATION-ID-V1\",[\"reprobond-corrected-20261001-a\",\"0xd0dd02322af812fc0dbddc69f9a055fbbe2c6673\",1]]";
+const DEPLOYED_SOURCE_SHA256 = "5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b";
+const REPLICATION_ID = "8432507f735155e812f7b4fba27177a765c0199fe3f788a9c8cfada9e31b3831";
+const REPLICATION_ID_CANONICAL = "[\"REPROBOND-REPLICATION-ID-V1\",[ \"reprobond-steward-20261007-a\",\"0xd0dd02322af812fc0dbddc69f9a055fbbe2c6673\",1]]";
+const CLAIM = "Optimization X improves mean runtime by at least 20 percent for fixed-demo-workload-v1.";
+const DEADLINE_UTC = "2026-11-07T00:00:00Z";
+const CRITERIA = Object.freeze([
+  { criterion_id: "environment", requirement: "The public evidence artifact states that the benchmark execution environment is Linux x86_64 with the same environment for the baseline and candidate, and records Studio Dev chain 61997 plus genlayer-js 2.0.0-rc.1 as adjudication/transaction metadata. The SDK version is not a benchmark-execution requirement.", semantics: "HARD" },
+  { criterion_id: "trial_count", requirement: "Exactly five baseline and five candidate trials are submitted as raw integer arrays.", semantics: "HARD" },
+  { criterion_id: "analysis_method", requirement: "Use candidate_relative_change_bps.v1 from the raw arrays and do not choose a result label manually.", semantics: "HARD" },
+  { criterion_id: "correctness_check", requirement: "The raw arrays are bounded and the evidence is fetched from the committed HTTPS URL.", semantics: "HARD" },
+]);
+const EVIDENCE_REQUIREMENTS = Object.freeze([
+  { evidence_id: "methodology", requirement: "The public HTTPS artifact identifies the benchmark environment, the five-trial protocol, the frozen analysis method, and the committed evidence binding for this replication.", required: true },
+]);
 const METHODOLOGY_URL = "https://raw.githubusercontent.com/Iniwura/reprobond/f6d0e4624e01768738d4edfc876894143ee85e08/fixtures/reprobond-corrected-20261001-a/methodology.md";
 const METHODOLOGY_HASH = "c124fdfed85d6ef4ef3f301c854994187151f3f35587d37166dbbde3f59bccac";
 const MANIFEST = Object.freeze([{ evidence_id: "methodology", url: METHODOLOGY_URL, sha256: METHODOLOGY_HASH }]);
 const BASELINE_RUNS = Object.freeze([100, 100, 100, 100, 100]);
 const CANDIDATE_RUNS = Object.freeze([75, 75, 75, 75, 75]);
 const REWARD = 1000000000000n;
+const SHORT_SCENARIO_ID = "reprobond-steward-consolidated-20261007-b";
+const SHORT_SCENARIO_REWARD = 1n;
+const SHORT_SCENARIO_ESCROW = 2n;
+const SHORT_SCENARIO_REPLICATION_ID = "e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e";
+const SHORT_SCENARIO_STUDIO_TIME_AT_PREP = "2026-10-07T21:54:08Z";
+const SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP = "2026-10-07T22:39:08Z";
+const SHORT_SCENARIO_CREATED_TX = "0x62f7764e3638db74145a2337c8a6cd0921917e9cc6a79b92d8df9a1da3d5dd7";
+
+// Keep the static scenario copy in index.html aligned with the active, authoritative
+// scenario constants when the runner is refreshed after a scenario replacement.
+function syncStaticScenarioLabels() {
+  const replacements = [
+    ["reprobond-steward-consolidated-20261007-a", SHORT_SCENARIO_ID],
+    ["2026-10-07T21:24:17Z", SHORT_SCENARIO_STUDIO_TIME_AT_PREP],
+    ["2026-10-07T22:04:17Z", SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP],
+    ["621e3ac7f3a02ab8cd976a350ccdc66f9ec79ce765df94bff4295de23ac8cbaa", SHORT_SCENARIO_REPLICATION_ID],
+    ["0x98711c08ae571bf92b75a8d9fd231e06e607ce72d1fc3c4c13c873c9678c102a", SHORT_SCENARIO_CREATED_TX],
+    ["37fa397f285c30c8e1ffe491bd9015b733fbe342b4094c8bab6a50b12171056d", "10983d19983fddb78274363a0d508e65cc2c4514d96f56f45c55d3e8fd9d5008"],
+  ];
+  const walk = () => {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      let value = node.nodeValue;
+      for (const [from, to] of replacements) value = value.split(from).join(to);
+      if (value !== node.nodeValue) node.nodeValue = value;
+    }
+  };
+  if (document.body) walk();
+  else window.addEventListener("DOMContentLoaded", walk, { once: true });
+}
+
+syncStaticScenarioLabels();
 const ZERO_VALUE = 0n;
 const readClient = createClient({ chain: studioDevnet });
 const STORAGE_KEY = "reprobond.live-audit.v3";
@@ -24,6 +68,7 @@ let provider = null;
 let account = null;
 let writeClient = null;
 let snapshot = { challenge: null, replication: null, replicationIds: [], balances: null };
+let shortScenario = { challenge: null, replication: null, replicationIds: [], deadline: null };
 let busy = false;
 let audit = loadAudit();
 
@@ -131,13 +176,13 @@ function attachProviderEvents() {
     writeClient = account ? createClient({ chain: studioDevnet, account, provider }) : null;
     setText("wallet", account || "not connected");
     log("WALLET_ACCOUNTS_CHANGED", { account });
-    try { await refreshAuthoritative("accounts changed"); }
+    try { await refreshAuthoritative("accounts changed"); await refreshShortScenario("accounts changed"); }
     catch (error) { log("REFRESH_ERROR: accounts changed", serializeError(error)); }
   });
   provider.on("chainChanged", async (chain) => {
     setText("chain", chain);
     log("WALLET_CHAIN_CHANGED", { chain });
-    try { await refreshAuthoritative("chain changed"); }
+    try { await refreshAuthoritative("chain changed"); await refreshShortScenario("chain changed"); }
     catch (error) { log("REFRESH_ERROR: chain changed", serializeError(error)); }
   });
 }
@@ -163,24 +208,85 @@ async function connectWallet() {
   setText("chain", CHAIN_ID + " (" + CHAIN_HEX + ")");
   log("WALLET_CONNECTED", { account, chain: CHAIN_ID });
   await refreshAuthoritative("wallet connected");
+  await refreshShortScenario("wallet connected");
 }
 async function readChallenge() {
-  return readClient.readContract({
+  try { return await readClient.readContract({
     address: CONTRACT,
     functionName: "get_challenge",
     args: [CHALLENGE_ID],
     jsonSafeReturn: true,
     transactionHashVariant: "latest-nonfinal",
-  });
+  }); } catch { return null; }
+}
+async function readChallengeBy(challengeId) {
+  try {
+    return await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_challenge",
+      args: [challengeId],
+      jsonSafeReturn: true,
+      transactionHashVariant: "latest-nonfinal",
+    });
+  } catch { return null; }
+}
+async function readReplicationIdsBy(challengeId) {
+  try {
+    return await readClient.readContract({
+      address: CONTRACT,
+      functionName: "get_challenge_replication_ids",
+      args: [challengeId],
+      jsonSafeReturn: true,
+      transactionHashVariant: "latest-nonfinal",
+    });
+  } catch { return []; }
+}
+async function latestStudioTimestamp() {
+  const block = await readClient.request({ method: "eth_getBlockByNumber", params: ["latest", false] });
+  if (!block || typeof block.timestamp !== "string" || !/^0x[0-9a-f]+$/i.test(block.timestamp)) {
+    throw new Error("Studio Dev latest block timestamp was unavailable; refusing to guess a deadline.");
+  }
+  const seconds = Number.parseInt(block.timestamp, 16);
+  if (!Number.isSafeInteger(seconds)) throw new Error("Studio Dev timestamp was not a safe integer.");
+  return seconds;
+}
+function formatUtcTimestamp(seconds) {
+  return new Date(seconds * 1000).toISOString().slice(0, 19) + "Z";
+}
+async function refreshShortScenario(label = "short scenario refresh") {
+  const challenge = await readChallengeBy(SHORT_SCENARIO_ID);
+  const ids = await readReplicationIdsBy(SHORT_SCENARIO_ID);
+  const replicationIds = Array.isArray(ids) ? ids : [];
+  let replication = null;
+  if (replicationIds.length) {
+    try {
+      replication = await readClient.readContract({
+        address: CONTRACT,
+        functionName: "get_replication",
+        args: [SHORT_SCENARIO_ID, String(replicationIds[0])],
+        jsonSafeReturn: true,
+        transactionHashVariant: "latest-nonfinal",
+      });
+    } catch {}
+  }
+  shortScenario = { challenge, replication, replicationIds, deadline: challenge?.deadline_utc || shortScenario.deadline };
+  setText("shortChallengeId", challenge?.challenge_id || SHORT_SCENARIO_ID);
+  setText("shortDeadline", challenge?.deadline_utc || "not created");
+  setText("shortState", challenge?.state || "not created");
+  setText("shortEscrow", challenge ? String(challenge.expected_escrow) + " wei required / " + String(challenge.escrow_funded) + " wei funded" : "not created");
+  setText("shortReplicationId", SHORT_SCENARIO_REPLICATION_ID);
+  setText("shortScenarioState", { label, shortScenario });
+  updateShortButtons();
+  return shortScenario;
 }
 async function readReplicationIds() {
-  return readClient.readContract({
+  try { return await readClient.readContract({
     address: CONTRACT,
     functionName: "get_challenge_replication_ids",
     args: [CHALLENGE_ID],
     jsonSafeReturn: true,
     transactionHashVariant: "latest-nonfinal",
-  });
+  }); } catch { return []; }
 }
 async function readReplication() {
   return readClient.readContract({
@@ -211,6 +317,7 @@ async function refreshAuthoritative(label = "manual refresh") {
   log("AUTHORITATIVE_STATE_READ", { label, ...snapshot });
   updatePlan();
   updateButtons();
+  updateShortButtons();
   return snapshot;
 }
 function manifestMatches() {
@@ -241,9 +348,11 @@ function updatePlan() {
   setText("instructions", {
     currentWallet: account || "not connected",
     currentRole: role,
-    next: state === "FUNDED" ? "Connect sponsor and activate."
+    next: !snapshot.challenge ? "Connect sponsor and create the canonical challenge."
+      : state === "DRAFT" ? "Connect sponsor and fund the exact escrow."
+      : state === "FUNDED" ? "Connect sponsor and activate."
       : state === "OPEN" && !snapshot.replication ? "Switch to the replicator wallet and submit."
-      : repState === "SUBMITTED" ? "Adjudication may be called by any connected wallet."
+      : repState === "SUBMITTED" ? "Wait until the frozen deadline, then connect the sponsor and attempt expiry before adjudication."
       : repState === "PASS" ? "Switch to the replicator wallet and settle."
       : repState === "PAID" ? "Keep the replicator wallet connected and attempt replay."
       : "Refresh authoritative state.",
@@ -263,9 +372,12 @@ function updateButtons() {
   const connected = Boolean(account && writeClient && provider);
   const sponsor = connected && sameAddress(account, SPONSOR);
   const replicator = connected && sameAddress(account, REPLICATOR);
+  $("create").disabled = busy || Boolean(challenge) || !sponsor;
+  $("fund").disabled = busy || !challenge || challenge.state !== "DRAFT" || asBigInt(challenge.expected_escrow) !== 3000000000000n || !sponsor;
   $("activate").disabled = busy || !challenge || challenge.state !== "FUNDED" || asBigInt(challenge.escrow_funded) !== 3000000000000n || !sponsor;
   $("submit").disabled = busy || !challenge || challenge.state !== "OPEN" || Boolean(replication) || !replicator;
-  $("adjudicate").disabled = busy || !challenge || !replication || replication.state !== "SUBMITTED" || !connected;
+  $("expire").disabled = busy || !challenge || challenge.state !== "OPEN" || !replication || replication.state !== "SUBMITTED" || !sponsor || !deadlineReachedLocally();
+  $("adjudicate").disabled = busy || !challenge || !replication || replication.state !== "SUBMITTED" || !connected || !audit.expiryAttempt?.complete;
   $("settle").disabled = busy || !challenge || !replication || replication.state !== "PASS" || !replicator;
   $("replay").disabled = busy || !challenge || !replication || replication.state !== "PAID" || !replicator || Boolean(audit.replay?.rejected);
 }
@@ -277,6 +389,10 @@ async function assertAccountChain(expected, role) {
   account = current;
   writeClient = createClient({ chain: studioDevnet, account, provider });
 }
+function deadlineReachedLocally() {
+  const raw = snapshot.challenge?.deadline_utc;
+  return typeof raw === "string" && Number.isFinite(Date.parse(raw)) && Date.now() >= Date.parse(raw);
+}
 function assertChallenge(expectedState) {
   if (!snapshot.challenge || snapshot.challenge.state !== expectedState) {
     throw new Error("Challenge must be " + expectedState + "; authoritative state is " + String(snapshot.challenge?.state));
@@ -287,13 +403,13 @@ function assertManifestPacket() {
   if (!manifestMatches()) throw new Error("Frozen methodology manifest does not match the corrected preflight.");
   if (!arraysMatch()) throw new Error("Frozen raw arrays do not match the corrected preflight.");
 }
-async function estimateWrite(method, args) {
+async function estimateWrite(method, args, value = ZERO_VALUE) {
   if (!writeClient) throw new Error("Connect the required wallet first.");
   return writeClient.estimateTransactionFeesForWrite({
     address: CONTRACT,
     functionName: method,
     args,
-    value: ZERO_VALUE,
+    value,
   });
 }
 function txStatus(tx) {
@@ -305,17 +421,17 @@ function txStatus(tx) {
     lifecycle: tx?.lifecycle,
   };
 }
-async function sendAndFinalize(label, method, args, expectedSuccess = true) {
-  const estimate = await estimateWrite(method, args);
+async function sendAndFinalize(label, method, args, expectedSuccess = true, value = ZERO_VALUE) {
+  const estimate = await estimateWrite(method, args, value);
   const feeValue = BigInt(estimate.feeValue);
   const preSign = {
     sdkVersion: "genlayer-js 2.0.0-rc.1",
     contract: CONTRACT,
     method,
     args,
-    userValue: ZERO_VALUE,
+    userValue: value,
     feeValue,
-    totalEnvelope: feeValue,
+    totalEnvelope: value + feeValue,
     feeDistribution: estimate.distribution,
     connectedAccount: account,
     chain: CHAIN_ID,
@@ -326,7 +442,7 @@ async function sendAndFinalize(label, method, args, expectedSuccess = true) {
     address: CONTRACT,
     functionName: method,
     args,
-    value: ZERO_VALUE,
+    value,
     fees: {
       distribution: estimate.distribution,
       messageAllocations: estimate.messageAllocations,
@@ -370,6 +486,80 @@ function actualFeeFromTransaction(tx) {
 async function finalizedTransaction(hash) {
   return readClient.getTransaction({ hash, fullTransaction: true });
 }
+async function createShortScenario() {
+  setBusy(true);
+  try {
+    await refreshShortScenario("before short scenario creation");
+    if (shortScenario.challenge) throw new Error("Short scenario ID already exists; refusing to overwrite.");
+    await assertAccountChain(SPONSOR, "sponsor");
+    const studioTimestamp = await latestStudioTimestamp();
+    const deadline = formatUtcTimestamp(studioTimestamp + SHORT_SCENARIO_WINDOW_SECONDS);
+    shortScenario.deadline = deadline;
+    setText("shortStudioTime", formatUtcTimestamp(studioTimestamp));
+    const args = [SHORT_SCENARIO_ID, CLAIM, CRITERIA, EVIDENCE_REQUIREMENTS, "candidate_relative_change_bps.v1", 2000, -2000, 1, SHORT_SCENARIO_REWARD, deadline];
+    const result = await sendAndFinalize("short_scenario_creation", "create_challenge", args);
+    await refreshShortScenario("after short scenario creation");
+    if (!shortScenario.challenge || shortScenario.challenge.state !== "DRAFT") throw new Error("Short scenario creation did not produce DRAFT.");
+    audit.shortScenario = { creation: { hash: result.hash, status: txStatus(result.finalized), args }, studioTimestamp: formatUtcTimestamp(studioTimestamp), deadline };
+    saveAudit();
+    setText("shortScenarioStatus", "Created; fund exact 1 wei escrow next.");
+    setStatus("short scenario created; fund exact 1 wei escrow next", "ok");
+  } finally { setBusy(false); updateShortButtons(); updateButtons(); }
+}
+async function fundShortScenario() {
+  setBusy(true);
+  try {
+    await refreshShortScenario("before short scenario funding");
+    if (!shortScenario.challenge || shortScenario.challenge.state !== "DRAFT") throw new Error("Short scenario must be DRAFT before funding.");
+    if (asBigInt(shortScenario.challenge.expected_escrow) !== SHORT_SCENARIO_ESCROW) throw new Error("Consolidated scenario escrow is not exactly 2 wei.");
+    await assertAccountChain(SPONSOR, "sponsor");
+    const result = await sendAndFinalize("consolidated_scenario_funding", "fund_challenge", [SHORT_SCENARIO_ID], true, SHORT_SCENARIO_ESCROW);
+    await refreshShortScenario("after short scenario funding");
+    if (shortScenario.challenge?.state !== "FUNDED") throw new Error("Short scenario funding did not produce FUNDED.");
+    audit.shortScenario.funding = { hash: result.hash, status: txStatus(result.finalized), userValue: SHORT_SCENARIO_ESCROW.toString() };
+    saveAudit();
+    setText("shortScenarioStatus", "Funded; later zero-value CLI audit actions remain locked until the funding proof is recorded.");
+  } finally { setBusy(false); updateShortButtons(); updateButtons(); }
+}
+async function activateShortScenario() {
+  setBusy(true);
+  try {
+    await refreshShortScenario("before short scenario activation");
+    if (shortScenario.challenge?.state !== "FUNDED") throw new Error("Short scenario must be FUNDED before activation.");
+    await assertAccountChain(SPONSOR, "sponsor");
+    const result = await sendAndFinalize("short_scenario_activation", "activate_challenge", [SHORT_SCENARIO_ID]);
+    await refreshShortScenario("after short scenario activation");
+    if (shortScenario.challenge?.state !== "OPEN") throw new Error("Short scenario activation did not produce OPEN.");
+    audit.shortScenario.activation = { hash: result.hash, status: txStatus(result.finalized) };
+    saveAudit();
+    setText("shortScenarioStatus", "OPEN; switch to replicator and submit before the deadline.");
+  } finally { setBusy(false); updateShortButtons(); updateButtons(); }
+}
+async function submitShortScenario() {
+  setBusy(true);
+  try {
+    await refreshShortScenario("before short scenario submission");
+    if (shortScenario.challenge?.state !== "OPEN") throw new Error("Short scenario must be OPEN before submission.");
+    if (Date.now() >= Date.parse(shortScenario.challenge.deadline_utc)) throw new Error("Short scenario deadline has already passed; refusing late submission.");
+    await assertAccountChain(REPLICATOR, "replicator");
+    const result = await sendAndFinalize("short_scenario_submission", "submit_replication", [SHORT_SCENARIO_ID, MANIFEST, BASELINE_RUNS, CANDIDATE_RUNS]);
+    await refreshShortScenario("after short scenario submission");
+    if (shortScenario.replication?.state !== "SUBMITTED") throw new Error("Short scenario submission did not produce SUBMITTED.");
+    audit.shortScenario.submission = { hash: result.hash, status: txStatus(result.finalized), replicationId: shortScenario.replication.replication_id };
+    saveAudit();
+    setText("shortScenarioStatus", "SUBMITTED; wait until the authoritative deadline, then switch to sponsor.");
+  } finally { setBusy(false); updateShortButtons(); updateButtons(); }
+}
+function updateShortButtons() {
+  const challenge = shortScenario.challenge;
+  const replication = shortScenario.replication;
+  const sponsor = account && sameAddress(account, SPONSOR);
+  const replicator = account && sameAddress(account, REPLICATOR);
+  $("shortCreate").disabled = true;
+  $("shortFund").disabled = busy || !challenge || challenge.challenge_id !== SHORT_SCENARIO_ID || challenge.state !== "DRAFT" || asBigInt(challenge.expected_escrow) !== SHORT_SCENARIO_ESCROW || !sponsor;
+  $("shortActivate").disabled = true;
+  $("shortSubmit").disabled = true;
+}
 async function activate() {
   setBusy(true);
   try {
@@ -383,6 +573,36 @@ async function activate() {
     if (snapshot.challenge.state !== "OPEN") throw new Error("Activation finalized but challenge is not OPEN.");
     saveAudit();
     setStatus("activation proven; switch to replicator for submission", "ok");
+  } finally { setBusy(false); updateButtons(); }
+}
+async function createChallenge() {
+  setBusy(true);
+  try {
+    await refreshAuthoritative("before challenge creation");
+    if (snapshot.challenge) throw new Error("Canonical challenge ID already exists; refusing to overwrite.");
+    await assertAccountChain(SPONSOR, "sponsor");
+    const args = [CHALLENGE_ID, CLAIM, CRITERIA, EVIDENCE_REQUIREMENTS, "candidate_relative_change_bps.v1", 2000, -2000, 3, REWARD, DEADLINE_UTC];
+    const result = await sendAndFinalize("creation", "create_challenge", args);
+    await refreshAuthoritative("after challenge creation");
+    if (!snapshot.challenge || snapshot.challenge.state !== "DRAFT") throw new Error("Creation finalized but challenge is not DRAFT.");
+    audit.creation = { hash: result.hash, status: txStatus(result.finalized), args };
+    saveAudit();
+    setStatus("challenge created; fund exact escrow next", "ok");
+  } finally { setBusy(false); updateButtons(); }
+}
+async function fundChallenge() {
+  setBusy(true);
+  try {
+    await refreshAuthoritative("before funding");
+    if (!snapshot.challenge || snapshot.challenge.state !== "DRAFT") throw new Error("Challenge must be DRAFT before funding.");
+    if (asBigInt(snapshot.challenge.expected_escrow) !== 3000000000000n) throw new Error("Exact 3,000,000,000,000 wei escrow is required.");
+    await assertAccountChain(SPONSOR, "sponsor");
+    const result = await sendAndFinalize("funding", "fund_challenge", [CHALLENGE_ID], true, 3000000000000n);
+    await refreshAuthoritative("after funding");
+    if (!snapshot.challenge || snapshot.challenge.state !== "FUNDED" || asBigInt(snapshot.challenge.escrow_funded) !== 3000000000000n) throw new Error("Funding finalized but exact escrow/state was not recorded.");
+    audit.funding = { hash: result.hash, status: txStatus(result.finalized), userValue: "3000000000000" };
+    saveAudit();
+    setStatus("exact escrow funded; activate next", "ok");
   } finally { setBusy(false); updateButtons(); }
 }
 async function submitReplication() {
@@ -413,6 +633,41 @@ function verifyRequiredResult() {
   if (String(replication.relative_change_bps) !== "-2500") return false;
   if (replication.result_direction !== "CONTRADICTS") return false;
   return required.every((id) => statuses.get(id) === "SATISFIED");
+}
+async function expireSubmittedAttempt() {
+  setBusy(true);
+  try {
+    await refreshAuthoritative("before SUBMITTED expiry attempt");
+    assertChallenge("OPEN");
+    if (!snapshot.replication || snapshot.replication.state !== "SUBMITTED") throw new Error("Expiry-block proof requires an authoritative SUBMITTED replication.");
+    if (!deadlineReachedLocally()) throw new Error("Frozen deadline has not been reached; refusing to submit a misleading expiry attempt.");
+    await assertAccountChain(SPONSOR, "sponsor");
+    let result;
+    try {
+      result = await sendAndFinalize("expiry_submitted_block", "expire_challenge", [CHALLENGE_ID], false);
+    } catch (error) {
+      audit.expiryAttempt = { complete: true, rejected: true, noFinalizedSuccess: true, error: serializeError(error) };
+      saveAudit();
+      await refreshAuthoritative("after fee-estimation rejection");
+      setStatus("expiry rejected before submission; inspect log for the SUBMITTED guard", "ok");
+      log("EXPIRY_BLOCK_PROOF", audit.expiryAttempt);
+      return;
+    }
+    await refreshAuthoritative("after SUBMITTED expiry attempt");
+    audit.expiryAttempt = {
+      complete: true,
+      rejected: !result.success,
+      hash: result.hash,
+      status: txStatus(result.finalized),
+      stateAfter: snapshot.challenge?.state,
+      replicationStateAfter: snapshot.replication?.state,
+    };
+    saveAudit();
+    if (result.success || snapshot.challenge?.state !== "OPEN" || snapshot.replication?.state !== "SUBMITTED") {
+      throw new Error("Expiry did not remain rejected while SUBMITTED work was pending.");
+    }
+    setStatus("expiry rejected with SUBMITTED replication pending; adjudication unlocked", "ok");
+  } finally { setBusy(false); updateButtons(); }
 }
 async function adjudicate() {
   setBusy(true);
@@ -510,6 +765,30 @@ $("refresh").addEventListener("click", () => refreshAuthoritative("manual refres
   log("ACTION_ERROR: refresh", serializeError(error));
   setStatus("refresh failed; see log", "bad");
 }));
+$("shortCreate").addEventListener("click", () => createShortScenario().catch((error) => {
+  log("ACTION_ERROR: short scenario creation", serializeError(error));
+  setStatus("short scenario creation failed; see log", "bad");
+}));
+$("shortFund").addEventListener("click", () => fundShortScenario().catch((error) => {
+  log("ACTION_ERROR: short scenario funding", serializeError(error));
+  setStatus("short scenario funding failed; see log", "bad");
+}));
+$("shortActivate").addEventListener("click", () => activateShortScenario().catch((error) => {
+  log("ACTION_ERROR: short scenario activation", serializeError(error));
+  setStatus("short scenario activation failed; see log", "bad");
+}));
+$("shortSubmit").addEventListener("click", () => submitShortScenario().catch((error) => {
+  log("ACTION_ERROR: short scenario submission", serializeError(error));
+  setStatus("short scenario submission failed; see log", "bad");
+}));
+$("create").addEventListener("click", () => createChallenge().catch((error) => {
+  log("ACTION_ERROR: creation", serializeError(error));
+  setStatus("creation failed; see log", "bad");
+}));
+$("fund").addEventListener("click", () => fundChallenge().catch((error) => {
+  log("ACTION_ERROR: funding", serializeError(error));
+  setStatus("funding failed; see log", "bad");
+}));
 $("activate").addEventListener("click", () => activate().catch((error) => {
   log("ACTION_ERROR: activation", serializeError(error));
   setStatus("activation failed; see log", "bad");
@@ -517,6 +796,10 @@ $("activate").addEventListener("click", () => activate().catch((error) => {
 $("submit").addEventListener("click", () => submitReplication().catch((error) => {
   log("ACTION_ERROR: submission", serializeError(error));
   setStatus("submission failed; see log", "bad");
+}));
+$("expire").addEventListener("click", () => expireSubmittedAttempt().catch((error) => {
+  log("ACTION_ERROR: expiry", serializeError(error));
+  setStatus("expiry attempt failed; see log", "bad");
 }));
 $("adjudicate").addEventListener("click", () => adjudicate().catch((error) => {
   log("ACTION_ERROR: adjudication", serializeError(error));
@@ -531,5 +814,14 @@ $("replay").addEventListener("click", () => replaySettlement().catch((error) => 
   setStatus("replay failed; see log", "bad");
 }));
 setText("config", configSummary());
+setText("shortChallengeId", SHORT_SCENARIO_ID);
+setText("shortStudioTime", SHORT_SCENARIO_STUDIO_TIME_AT_PREP);
+setText("shortDeadline", SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP);
+setText("shortState", "not created");
+setText("shortEscrow", "2 wei required / 0 wei funded");
+setText("shortReplicationId", SHORT_SCENARIO_REPLICATION_ID);
+setText("shortScenarioState", { challengeId: SHORT_SCENARIO_ID, requiredSlots: 2, rewardPerSlot: SHORT_SCENARIO_REWARD, expectedEscrow: SHORT_SCENARIO_ESCROW, studioTimeAtPreparation: SHORT_SCENARIO_STUDIO_TIME_AT_PREP, deadline: SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP, createdTx: SHORT_SCENARIO_CREATED_TX, note: "Consolidated challenge exists on-chain. Only funding is enabled; all later audit actions use zero-user-value CLI writes." });
+setText("shortScenarioStatus", "Consolidated challenge created; connect sponsor and click Fund consolidated challenge.");
 updatePlan();
 updateButtons();
+updateShortButtons();

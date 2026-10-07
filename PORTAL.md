@@ -20,13 +20,26 @@ Reproducibility usually asks people to trust a narrative. ReproBond turns the mo
 
 PASS / -2500 bps / CONTRADICTS / PAID
 
-Studio Dev chain 61997, production contract 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc.
+Studio Dev chain 61997, current corrected production contract 0x897a7dF67E638506557985FE795Ff2F762f01607. Historical v1 only: 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc.
 
 ## Important limitation
 
 ReproBond reports a replication record and deterministic result. It does not claim universal scientific truth.
 
 
+## Steward corrections
+
+The corrected deployment uses source SHA-256
+5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b.
+Canonical live challenge: reprobond-steward-consolidated-20261007-b.
+Canonical replication: e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e.
+The live record proves PASS + -2500 bps + CONTRADICTS -> PAID, exact unused
+escrow refund, and replay rejection. The detailed record is
+docs/STEWARD_AUDIT_20261007.md.
+
 ## Deployment labeling
 
-The displayed live proof is Historical v1 until the corrected contract has a fresh Studio Dev deployment and new live scenario evidence. The corrected release enforces deterministic deadlines, safe partial closure/refund, required-vs-optional evidence, and qualified-slot capacity.
+The old address is historical v1 only. The displayed live proof is backed by
+the corrected deployment. The corrected release enforces deterministic
+deadlines, safe partial closure/refund, required-vs-optional evidence, and
+qualified-slot capacity.

@@ -1,4 +1,21 @@
-# ReproBond Corrected Challenge — Final Live Audit
+# ReproBond Final Live Audit
+
+> Current authoritative record: [STEWARD_AUDIT_20261007.md](STEWARD_AUDIT_20261007.md)
+
+Current production contract: `0x897a7dF67E638506557985FE795Ff2F762f01607`
+
+Historical v1 contract only: `0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc`
+
+Current source SHA-256: `5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b`
+
+Current canonical consolidated challenge: `reprobond-steward-consolidated-20261007-b`
+
+The detailed current record distinguishes live proofs from Direct Mode-only coverage.
+
+---
+
+## Archived prior v1 record
+
 
 Status: completed on Studio Dev, chain `61997`.
 

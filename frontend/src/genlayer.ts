@@ -2,15 +2,15 @@ import { createClient, isSuccessful } from 'genlayer-js'
 import { studioDevnet } from 'genlayer-js/chains'
 import { TransactionHashVariant, type CalldataEncodable } from 'genlayer-js/types'
 
-export const CONTRACT_ADDRESS = '0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc' as `0x${string}`
+export const CONTRACT_ADDRESS = '0x897a7dF67E638506557985FE795Ff2F762f01607' as `0x${string}`
 export const CHAIN_ID = 61997
 export const CHAIN_HEX = `0x${CHAIN_ID.toString(16)}`
 export const RPC_URL = 'https://studio-dev.genlayer.com/api'
-export const SOURCE_SHA256 = '0471c6c4f014499a7b1537be7b9b5952aa750d2a220903b5c623bb088d193fbc'
+export const SOURCE_SHA256 = '5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b'
 export const SPONSOR = '0xa35dc047f9937bf668743efbdf8ea93b31a55888'
-export const LIVE_CHALLENGE_ID = 'reprobond-corrected-20261001-a'
-export const LIVE_REPLICATION_ID = 'd3dfda779724b60dacba75d35ba1ec260c0f82898facc9a610e404452606f5e4'
-export const LIVE_REPLICATOR = '0xd0dd02322AF812fC0dbDdC69f9a055FBBe2C6673'
+export const LIVE_CHALLENGE_ID = 'reprobond-steward-consolidated-20261007-b'
+export const LIVE_REPLICATION_ID = 'e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e'
+export const LIVE_REPLICATOR = '0x30fd7e8539a8462591e62894739c6864e9b81fa2'
 export const LIVE_METHODOLOGY_URL = 'https://raw.githubusercontent.com/Iniwura/reprobond/f6d0e4624e01768738d4edfc876894143ee85e08/fixtures/reprobond-corrected-20261001-a/methodology.md'
 export const LIVE_METHODOLOGY_HASH = 'c124fdfed85d6ef4ef3f301c854994187151f3f35587d37166dbbde3f59bccac'
 export const LIVE_BASELINE = [100, 100, 100, 100, 100]
