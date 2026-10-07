@@ -7,7 +7,12 @@
 - Network target: Studio Dev, chain 61997
 - Installed CLI: GenLayer 0.40.0-rc.3
 - Installed lint/runtime gates: genvm-lint 0.11.0, Python 3.12.3, pinned Direct Mode environment in /home/ini/materialproof/.venv.
-- Deployment status: pending new deployment and live audit.
+- Deployment status: deployed and live-audited on Studio Dev.
+- Corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
+- Deployment transaction: 0x4e274c6d87bbe2b51b17c1c17df577b79960705c96e34920854c92502aecc9d4
+- Canonical live challenge: reprobond-steward-consolidated-20261007-b
+- Canonical replication: e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e
+- Live audit: docs/STEWARD_AUDIT_20261007.md
 
 The historical v1 contract at 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc remains unchanged and is not the corrected deployment.
 

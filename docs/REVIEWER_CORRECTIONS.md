@@ -1,6 +1,11 @@
 # ReproBond Reviewer Corrections
 
-Status: local deployment candidate. The contract changes are not claimed as live until a new Studio Dev deployment and fresh live proof are complete.
+Status: deployed and live-audited on Studio Dev chain 61997.
+
+Current corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
+Source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
+Deployment transaction: 0x4e274c6d87bbe2b51b17c1c17df577b79960705c96e34920854c92502aecc9d4
+Canonical live record: docs/STEWARD_AUDIT_20261007.md
 
 ## Corrections implemented
 
@@ -26,4 +31,7 @@ Runners and the app use the contract schema as the source of truth. Evidence man
 
 ## Release gate
 
-The corrected contract must be deployed as a new address. The old address is historical v1 only: `0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc`. This document is a local change summary; live deployment, transaction hashes, and live scenario proof are recorded only after authoritative Studio Dev reads.
+The corrected contract is deployed as a new address. The old address is
+historical v1 only: `0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc`. Live
+deployment, transaction hashes, and scenario proof are recorded in
+docs/STEWARD_AUDIT_20261007.md.
