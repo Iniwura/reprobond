@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReproBond live audit</title>
+<title>ReproBond final Steward proof</title>
 <style>
 :root{color-scheme:dark;font:15px/1.45 system-ui,sans-serif}body{max-width:820px;margin:2rem auto;padding:0 1rem;background:#101318;color:#edf1f7}
 section{border:1px solid #303846;border-radius:10px;padding:1rem;margin:1rem 0}button{font:inherit;padding:.55rem .8rem;border-radius:6px;border:1px solid #526070;cursor:pointer;background:#24364a;color:#fff;margin:.25rem .5rem .25rem 0}button:disabled{opacity:.45;cursor:not-allowed}
@@ -11,14 +11,14 @@ code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{overflow-w
 </style>
 </head>
 <body>
-<h1>ReproBond live audit</h1>
-<p class="muted">Minimal sequential production audit runner. It uses direct Rabby/MetaMask EIP-1193, the installed Driftline GenLayer client path, fee estimation, finality waits, authoritative rereads, payout accounting, and replay verification.</p>
+<h1>ReproBond final Steward proof</h1>
+<p class="muted">One isolated two-slot Studio Dev scenario remains. Connect the sponsor only for the exact 2 wei escrow funding signature; all later zero-user-value audit actions use the verified CLI path.</p>
 <section>
 <div class="row"><span>Wallet</span><code id="wallet">not connected</code></div>
 <div class="row"><span>Chain</span><code id="chain">unknown</code></div>
 <div class="row"><span>Contract</span><code>0x897a7dF67E638506557985FE795Ff2F762f01607</code></div>
-<div class="row"><span>Challenge</span><code>reprobond-steward-20261007-a</code></div>
-<div class="row"><span>Derived replication ID</span><code id="replicationId">8432507f735155e812f7b4fba27177a765c0199fe3f788a9c8cfada9e31b3831</code></div>
+<div class="row"><span>Active challenge</span><code>reprobond-steward-final-slots-20261008-a</code></div>
+<div class="row"><span>Derived replication ID</span><code id="replicationId">not submitted</code></div>
 <div class="row"><span>Status</span><span id="status">ready to connect</span></div>
 </section>
 <section>
@@ -26,7 +26,7 @@ code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{overflow-w
 <button id="refresh">Refresh authoritative state</button>
 <pre id="instructions">Connect a wallet to begin.</pre>
 </section>
-<section>
+<section hidden>
 <button id="create" disabled>0. Create challenge</button>
 <button id="fund" disabled>0. Fund exact escrow</button>
 <button id="activate" disabled>1. Activate challenge</button>
@@ -36,20 +36,21 @@ code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{overflow-w
 <button id="settle" disabled>5. Settle replication</button>
 <button id="replay" disabled>6. Attempt duplicate settlement</button>
 </section>
-<section><h2>Frozen audit configuration</h2><pre id="config">Not read yet.</pre></section><section><h2>Consolidated short-deadline scenario</h2>
-<p class="muted">This scenario consolidates the remaining Steward proofs into one two-slot challenge. It is already created on-chain with a 2 wei escrow requirement. Only funding is exposed here; every later audit write uses zero user value through the verified CLI path.</p>
-<div class="row"><span>Consolidated challenge ID</span><code id="shortChallengeId">reprobond-steward-consolidated-20261007-a</code></div>
-<div class="row"><span>Studio time used at prep</span><code id="shortStudioTime">2026-10-07T21:24:17Z</code></div>
-<div class="row"><span>Exact deadline</span><code id="shortDeadline">2026-10-07T22:04:17Z</code></div>
-<div class="row"><span>Current state</span><code id="shortState">not created</code></div>
+<section hidden><h2>Frozen audit configuration</h2><pre id="config">Not read yet.</pre></section><section><h2>Final dedicated two-slot scenario</h2>
+<p class="muted">This challenge is created on-chain with two required slots and an exact 2 wei escrow. The button below is the only manual transaction exposed at this boundary.</p>
+<div class="row"><span>Challenge ID</span><code id="shortChallengeId">reprobond-steward-final-slots-20261008-a</code></div>
+<div class="row"><span>Studio time used at prep</span><code id="shortStudioTime">2026-10-08T10:19:11Z</code></div>
+<div class="row"><span>Exact deadline</span><code id="shortDeadline">2026-10-08T11:19:11Z</code></div>
+<div class="row"><span>Current state</span><code id="shortState">DRAFT</code></div>
 <div class="row"><span>Escrow</span><code id="shortEscrow">2 wei required / 0 wei funded</code></div>
-<div class="row"><span>Derived replication ID</span><code id="shortReplicationId">621e3ac7f3a02ab8cd976a350ccdc66f9ec79ce765df94bff4295de23ac8cbaa</code></div>
+<div class="row"><span>Challenge fingerprint</span><code id="shortFingerprint">0d7c8c120e00ad4132fa9c0b43a70e42be52b0f8d3fa94ab497309a678b31d83</code></div>
+<div class="row"><span>Derived replication ID</span><code id="shortReplicationId">not submitted; derived after each submission</code></div>
 <div class="row"><span>Scenario state</span><pre id="shortScenarioState">Not read yet.</pre></div>
-<div class="row"><span>Scenario status</span><span id="shortScenarioStatus">Consolidated challenge created; connect sponsor and click Fund consolidated challenge.</span></div>
-<button id="shortCreate" disabled>Create consolidated challenge (already on-chain)</button>
-<button id="shortFund" disabled>Fund consolidated challenge — exact 2 wei</button>
-<button id="shortActivate" disabled>Activate consolidated challenge (CLI later)</button>
-<button id="shortSubmit" disabled>Submit consolidated replication (CLI later)</button>
+<div class="row"><span>Scenario status</span><span id="shortScenarioStatus">Final proof challenge created; connect sponsor and click Fund final proof challenge.</span></div>
+<button id="shortCreate" hidden disabled>Create final proof challenge (already on-chain)</button>
+<button id="shortFund" disabled>Fund final proof challenge — exact 2 wei</button>
+<button id="shortActivate" hidden disabled>Activate final proof challenge (CLI later)</button>
+<button id="shortSubmit" hidden disabled>Submit final proof replication (CLI later)</button>
 </section>
 
 <section><h2>Authoritative challenge</h2><pre id="challenge">Not read yet.</pre></section>

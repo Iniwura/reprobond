@@ -27,24 +27,31 @@ const MANIFEST = Object.freeze([{ evidence_id: "methodology", url: METHODOLOGY_U
 const BASELINE_RUNS = Object.freeze([100, 100, 100, 100, 100]);
 const CANDIDATE_RUNS = Object.freeze([75, 75, 75, 75, 75]);
 const REWARD = 1000000000000n;
-const SHORT_SCENARIO_ID = "reprobond-steward-consolidated-20261007-b";
+const SHORT_SCENARIO_ID = "reprobond-steward-final-slots-20261008-a";
 const SHORT_SCENARIO_REWARD = 1n;
 const SHORT_SCENARIO_ESCROW = 2n;
-const SHORT_SCENARIO_REPLICATION_ID = "e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e";
-const SHORT_SCENARIO_STUDIO_TIME_AT_PREP = "2026-10-07T21:54:08Z";
-const SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP = "2026-10-07T22:39:08Z";
-const SHORT_SCENARIO_CREATED_TX = "0x62f7764e3638db74145a2337c8a6cd0921917e9cc6a79b92d8df9a1da3d5dd7";
+const SHORT_SCENARIO_REPLICATION_ID = "";
+const SHORT_SCENARIO_FINGERPRINT = "0d7c8c120e00ad4132fa9c0b43a70e42be52b0f8d3fa94ab497309a678b31d83";
+const SHORT_SCENARIO_STUDIO_TIME_AT_PREP = "2026-10-08T10:19:11Z";
+const SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP = "2026-10-08T11:19:11Z";
+const SHORT_SCENARIO_CREATED_TX = "0xc72aaa6a46bfed9c45b91689e98b9c4f0dd1258374bdd94f42efebf7d208bae1";
 
 // Keep the static scenario copy in index.html aligned with the active, authoritative
 // scenario constants when the runner is refreshed after a scenario replacement.
 function syncStaticScenarioLabels() {
   const replacements = [
     ["reprobond-steward-consolidated-20261007-a", SHORT_SCENARIO_ID],
+    ["reprobond-steward-consolidated-20261007-b", SHORT_SCENARIO_ID],
     ["2026-10-07T21:24:17Z", SHORT_SCENARIO_STUDIO_TIME_AT_PREP],
     ["2026-10-07T22:04:17Z", SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP],
-    ["621e3ac7f3a02ab8cd976a350ccdc66f9ec79ce765df94bff4295de23ac8cbaa", SHORT_SCENARIO_REPLICATION_ID],
+    ["2026-10-07T21:54:08Z", SHORT_SCENARIO_STUDIO_TIME_AT_PREP],
+    ["2026-10-07T22:39:08Z", SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP],
+    ["621e3ac7f3a02ab8cd976a350ccdc66f9ec79ce765df94bff4295de23ac8cbaa", SHORT_SCENARIO_REPLICATION_ID || "not submitted"],
+    ["e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e", SHORT_SCENARIO_REPLICATION_ID || "not submitted"],
     ["0x98711c08ae571bf92b75a8d9fd231e06e607ce72d1fc3c4c13c873c9678c102a", SHORT_SCENARIO_CREATED_TX],
-    ["37fa397f285c30c8e1ffe491bd9015b733fbe342b4094c8bab6a50b12171056d", "10983d19983fddb78274363a0d508e65cc2c4514d96f56f45c55d3e8fd9d5008"],
+    ["0x62f7764e3638db74145a2337c8a6cd0921917e9cc6a79b92d8df9a1da3d5dd7", SHORT_SCENARIO_CREATED_TX],
+    ["37fa397f285c30c8e1ffe491bd9015b733fbe342b4094c8bab6a50b12171056d", "not available before submission"],
+    ["10983d19983fddb78274363a0d508e65cc2c4514d96f56f45c55d3e8fd9d5008", "not available before submission"],
   ];
   const walk = () => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -274,7 +281,8 @@ async function refreshShortScenario(label = "short scenario refresh") {
   setText("shortDeadline", challenge?.deadline_utc || "not created");
   setText("shortState", challenge?.state || "not created");
   setText("shortEscrow", challenge ? String(challenge.expected_escrow) + " wei required / " + String(challenge.escrow_funded) + " wei funded" : "not created");
-  setText("shortReplicationId", SHORT_SCENARIO_REPLICATION_ID);
+  setText("shortReplicationId", replicationIds[0] || SHORT_SCENARIO_REPLICATION_ID || "not submitted; derived after each submission");
+  setText("shortFingerprint", challenge?.fingerprint || SHORT_SCENARIO_FINGERPRINT || "read from authoritative challenge");
   setText("shortScenarioState", { label, shortScenario });
   updateShortButtons();
   return shortScenario;
@@ -502,8 +510,8 @@ async function createShortScenario() {
     if (!shortScenario.challenge || shortScenario.challenge.state !== "DRAFT") throw new Error("Short scenario creation did not produce DRAFT.");
     audit.shortScenario = { creation: { hash: result.hash, status: txStatus(result.finalized), args }, studioTimestamp: formatUtcTimestamp(studioTimestamp), deadline };
     saveAudit();
-    setText("shortScenarioStatus", "Created; fund exact 1 wei escrow next.");
-    setStatus("short scenario created; fund exact 1 wei escrow next", "ok");
+    setText("shortScenarioStatus", "Created; fund exact 2 wei escrow next.");
+    setStatus("final proof challenge created; fund exact 2 wei escrow next", "ok");
   } finally { setBusy(false); updateShortButtons(); updateButtons(); }
 }
 async function fundShortScenario() {
@@ -518,7 +526,7 @@ async function fundShortScenario() {
     if (shortScenario.challenge?.state !== "FUNDED") throw new Error("Short scenario funding did not produce FUNDED.");
     audit.shortScenario.funding = { hash: result.hash, status: txStatus(result.finalized), userValue: SHORT_SCENARIO_ESCROW.toString() };
     saveAudit();
-    setText("shortScenarioStatus", "Funded; later zero-value CLI audit actions remain locked until the funding proof is recorded.");
+    setText("shortScenarioStatus", "Funded; later zero-value CLI audit actions can proceed through the verified CLI path.");
   } finally { setBusy(false); updateShortButtons(); updateButtons(); }
 }
 async function activateShortScenario() {
@@ -817,11 +825,12 @@ setText("config", configSummary());
 setText("shortChallengeId", SHORT_SCENARIO_ID);
 setText("shortStudioTime", SHORT_SCENARIO_STUDIO_TIME_AT_PREP);
 setText("shortDeadline", SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP);
-setText("shortState", "not created");
+setText("shortState", "DRAFT");
 setText("shortEscrow", "2 wei required / 0 wei funded");
-setText("shortReplicationId", SHORT_SCENARIO_REPLICATION_ID);
-setText("shortScenarioState", { challengeId: SHORT_SCENARIO_ID, requiredSlots: 2, rewardPerSlot: SHORT_SCENARIO_REWARD, expectedEscrow: SHORT_SCENARIO_ESCROW, studioTimeAtPreparation: SHORT_SCENARIO_STUDIO_TIME_AT_PREP, deadline: SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP, createdTx: SHORT_SCENARIO_CREATED_TX, note: "Consolidated challenge exists on-chain. Only funding is enabled; all later audit actions use zero-user-value CLI writes." });
-setText("shortScenarioStatus", "Consolidated challenge created; connect sponsor and click Fund consolidated challenge.");
+setText("shortReplicationId", SHORT_SCENARIO_REPLICATION_ID || "not submitted; derived after each submission");
+setText("shortFingerprint", SHORT_SCENARIO_FINGERPRINT);
+setText("shortScenarioState", { challengeId: SHORT_SCENARIO_ID, requiredSlots: 2, rewardPerSlot: SHORT_SCENARIO_REWARD, expectedEscrow: SHORT_SCENARIO_ESCROW, studioTimeAtPreparation: SHORT_SCENARIO_STUDIO_TIME_AT_PREP, deadline: SHORT_SCENARIO_TARGET_DEADLINE_AT_PREP, createdTx: SHORT_SCENARIO_CREATED_TX, note: "Final dedicated two-slot challenge exists on-chain. Only the exact 2 wei funding action is exposed for manual signing." });
+setText("shortScenarioStatus", "Final proof challenge created; connect sponsor and click Fund final proof challenge.");
 updatePlan();
 updateButtons();
 updateShortButtons();
