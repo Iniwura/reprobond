@@ -1,5 +1,9 @@
 # ReproBond Public Contract Schema
 
+This schema describes the local steward-fix candidate. It is not the schema
+of the historical deployed addresses until a separately approved deployment
+is completed.
+
 Contract: contracts/repro_bond.py.
 
 ## Writes
@@ -40,7 +44,7 @@ get_aggregate_result(challenge_id) -> str
 
 ## Stored fingerprints
 
-Challenge fingerprint binds schema version, challenge ID, sponsor, claim, criteria, evidence requirements, metric, thresholds, slot count, reward, deadline, and expected escrow.
+Challenge fingerprint binds schema version, challenge ID, sponsor, claim, criteria, evidence requirements, metric, thresholds, slot count, reward, deadline, fixed recovery-grace seconds, derived recovery deadline, and expected escrow.
 
 Submission revision fingerprint binds challenge ID, replication ID, replicator, revision, manifest, and raw arrays.
 
@@ -60,3 +64,28 @@ Result fingerprint binds challenge ID, replication ID, revision, fidelity, exact
 - Repairs: at most 2 revisions after the initial submission.
 - One challenge: at most 64 distinct replication records.
 - Fidelity reasoning: <=1200 characters; source total <=65536 characters.
+
+## Challenge view accounting
+
+`get_challenge` additionally returns `recovery_grace_seconds`,
+`recovery_deadline_utc`, `refunded_total`, and these auditable per-challenge
+wei values:
+
+- `earned_liability = qualified_count * reward_per_replication`;
+- `outstanding_pass_reserve = earned_liability - paid_total`;
+- `refundable_unused = escrow_funded - earned_liability`;
+- `refundable_remaining = refundable_unused - refunded_total`;
+- `remaining_pool = escrow_funded - paid_total - refunded_total`.
+
+`refund_unused` is one-shot and may return `refundable_unused` while PASS
+records remain unpaid. `settle_replication` accepts `REFUNDED` challenges and
+can spend only the outstanding PASS reserve.
+
+## Recovery semantics
+
+The fixed recovery grace is 86,400 transaction-time seconds. During grace,
+`SUBMITTED` and repairable `UNRESOLVED` records block `expire_challenge`.
+At or after `recovery_deadline_utc`, the sponsor may close an incomplete
+challenge; those pending records become `ABANDONED`, with an appended history
+snapshot and `abandonment_reason = RECOVERY_GRACE_EXPIRED`. `ABANDONED` is not
+FAIL, does not qualify, and cannot be paid.

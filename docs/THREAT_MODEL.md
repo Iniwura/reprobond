@@ -48,6 +48,22 @@ Defense: the contract converts the affected adjudication to UNRESOLVED and allow
 
 Limitation: availability depends on the GenLayer fetch/runtime and the replicator may need a replacement revision.
 
+### Abandoned repairable UNRESOLVED
+
+Attack: submit a record, allow every repair opportunity to lapse, and leave a
+challenge permanently uncloseable.
+
+Invariant: pending work is protected during a bounded grace period but cannot
+lock escrow forever.
+
+Defense: transaction-time `recovery_deadline_utc` is frozen as deadline plus
+24 hours. Before it, `SUBMITTED` and repairable `UNRESOLVED` block expiry. At
+or after it, expiry appends a history snapshot and transitions those records
+to explicit `ABANDONED`, never `FAIL`; they cannot qualify or pay.
+
+Limitation: abandonment is an operational closure outcome, not a scientific
+judgment, and timely users must act before the recovery deadline.
+
 ### Hash mismatch
 
 Attack: fetched bytes do not match the submitted expected SHA-256.
@@ -154,9 +170,41 @@ Attack: replay settlement.
 
 Invariant: a replication can be PAID only once and paid_total cannot exceed escrow.
 
-Defense: settlement requires PASS, exact stored replicator authorization, state transition to PAID before emit_transfer, and remaining-pool checks.
+Defense: settlement requires PASS, exact stored replicator authorization, state transition to PAID before emit_transfer, and remaining-pool checks that subtract `refunded_total`. REFUNDED challenges remain settleable for already-earned PASS reserves.
 
 Limitation: a failed external transfer must be handled by the runtime atomically; the live integration gate must confirm this behavior.
+
+### Unpaid PASS blocking unrelated sponsor recovery
+
+Attack: one replicator abandons an earned PASS, preventing the sponsor from
+recovering escrow for slots that never qualified.
+
+Invariant: earned PASS liabilities are reserved; only unearned slot escrow is
+refundable.
+
+Defense: `earned_liability = qualified_count * reward`; `refund_unused`
+returns `escrow_funded - earned_liability` and records `refunded_total` without
+touching the reserve. The original PASS replicator can settle after REFUNDED.
+
+Limitation: the sponsor cannot recover the outstanding PASS reserve until its
+replicator claims or the contract's accounting remains permanently reserved.
+
+### Cross-challenge refund and payout ordering
+
+Attack: use a refund or payout from one challenge to satisfy another
+challenge's obligation, or let ordering overdraw the shared contract balance.
+
+Invariant: every challenge tracks its own funded escrow, earned liability,
+paid total, refunded total, and remaining pool.
+
+Defense: writes accept one challenge/replication ID, validate stored ownership,
+and check `escrow_funded - paid_total - refunded_total` plus the outstanding
+PASS reserve for that challenge. No write can edit another challenge's
+accounting.
+
+Limitation: the native contract balance is globally shared by the runtime; an
+external drain or incorrect deployment funding can still cause a transfer
+failure, so deployment operations must preserve the escrow invariant.
 
 ### Race between final replication slots
 

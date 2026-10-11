@@ -117,6 +117,10 @@ def advance_to_deadline(direct_vm):
     direct_vm.warp("2099-01-01T00:00:00Z")
 
 
+def advance_to_recovery_deadline(direct_vm):
+    direct_vm.warp("2099-01-02T00:00:00Z")
+
+
 def mock_evidence(direct_vm, bodies=None):
     actual = BODIES if bodies is None else bodies
     direct_vm.clear_mocks()
@@ -1170,6 +1174,61 @@ def test_expiry_with_repairable_unresolved_replication_rejected(
         contract.expire_challenge(CHALLENGE)
 
 
+def test_abandoned_submitted_record_closes_after_recovery_grace(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("recovery grace period"):
+        contract.expire_challenge(CHALLENGE)
+    direct_vm.warp("2099-01-01T23:59:59Z")
+    with direct_vm.expect_revert("recovery grace period"):
+        contract.expire_challenge(CHALLENGE)
+    advance_to_recovery_deadline(direct_vm)
+    contract.expire_challenge(CHALLENGE)
+    replication = record(contract, replication_id)
+    assert replication["state"] == "ABANDONED"
+    assert replication["abandonment_reason"] == "RECOVERY_GRACE_EXPIRED"
+    assert replication["history_length"] == 1
+    assert contract.get_replication_history(CHALLENGE, replication_id)[0]["event"] == (
+        "ABANDONED_AFTER_RECOVERY_GRACE"
+    )
+    assert contract.get_challenge(CHALLENGE)["state"] == "EXPIRED"
+
+
+def test_abandoned_repairable_unresolved_record_closes_after_recovery_grace(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm, ["SATISFIED", "UNRESOLVED", "SATISFIED"])
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("recovery grace period"):
+        contract.expire_challenge(CHALLENGE)
+    advance_to_recovery_deadline(direct_vm)
+    contract.expire_challenge(CHALLENGE)
+    replication = record(contract, replication_id)
+    assert replication["state"] == "ABANDONED"
+    assert replication["fidelity_status"] == "UNRESOLVED"
+    assert replication["abandonment_reason"] == "RECOVERY_GRACE_EXPIRED"
+    assert contract.get_challenge(CHALLENGE)["qualified_count"] == 0
+
+
+def test_recovery_deadline_is_frozen_and_exposed(direct_deploy, direct_vm, direct_alice):
+    contract = deploy(direct_deploy)
+    create(contract, direct_vm, direct_alice)
+    challenge = contract.get_challenge(CHALLENGE)
+    assert challenge["deadline_utc"] == DEADLINE
+    assert challenge["recovery_grace_seconds"] == 24 * 60 * 60
+    assert challenge["recovery_deadline_utc"] == "2099-01-02T00:00:00Z"
+
+
 def test_partial_pass_challenge_can_expire_after_deadline(
     direct_deploy, direct_vm, direct_alice, direct_bob
 ):
@@ -1202,7 +1261,7 @@ def test_unpaid_pass_remains_settleable_after_expiry(
     assert record(contract, replication_id)["state"] == "PAID"
 
 
-def test_refund_blocked_while_pass_unpaid(
+def test_unused_refund_does_not_wait_for_unpaid_pass(
     direct_deploy, direct_vm, direct_alice, direct_bob, monkeypatch
 ):
     contract = deploy(direct_deploy)
@@ -1213,9 +1272,14 @@ def test_refund_blocked_while_pass_unpaid(
     advance_to_deadline(direct_vm)
     direct_vm.sender = direct_alice
     contract.expire_challenge(CHALLENGE)
-    install_transfer_spy(contract, monkeypatch)
-    with direct_vm.expect_revert("PASS replications"):
-        contract.refund_unused(CHALLENGE)
+    spy = install_transfer_spy(contract, monkeypatch)
+    refund = contract.refund_unused(CHALLENGE)
+    assert refund == REWARD
+    assert spy.calls[-1] == ("0x" + direct_alice.hex(), REWARD)
+    challenge = contract.get_challenge(CHALLENGE)
+    assert challenge["state"] == "REFUNDED"
+    assert challenge["refunded_total"] == REWARD
+    assert challenge["outstanding_pass_reserve"] == REWARD
 
 
 def test_partial_pass_refunds_only_unused_escrow(
@@ -1255,6 +1319,100 @@ def test_paid_pass_accounting_is_preserved_after_settlement(
     assert challenge["qualified_count"] == 1
     assert challenge["paid_count"] == 1
     assert challenge["paid_total"] == REWARD
+
+
+def test_unpaid_pass_claims_reserved_reward_after_sponsor_refund(
+    direct_deploy,
+    direct_vm,
+    direct_alice,
+    direct_bob,
+    monkeypatch,
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=2, reward=REWARD)
+    replication_id = submit(contract, direct_vm, direct_bob)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, replication_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    spy = install_transfer_spy(contract, monkeypatch)
+    refund = contract.refund_unused(CHALLENGE)
+    assert refund == REWARD
+    direct_vm.sender = direct_bob
+    contract.settle_replication(CHALLENGE, replication_id)
+    assert spy.calls == [
+        ("0x" + direct_alice.hex(), REWARD),
+        ("0x" + direct_bob.hex(), REWARD),
+    ]
+    challenge = contract.get_challenge(CHALLENGE)
+    assert challenge["state"] == "REFUNDED"
+    assert challenge["paid_total"] == REWARD
+    assert challenge["refunded_total"] == REWARD
+    assert challenge["remaining_pool"] == 0
+
+
+def test_settlement_after_refund_cannot_spend_sponsor_refund(
+    direct_deploy,
+    direct_vm,
+    direct_alice,
+    direct_bob,
+    direct_charlie,
+    monkeypatch,
+):
+    contract = deploy(direct_deploy)
+    fund_and_open(contract, direct_vm, direct_alice, slots=2, reward=REWARD)
+    pass_id = submit(contract, direct_vm, direct_bob)
+    fail_id = submit(contract, direct_vm, direct_charlie)
+    mock_fidelity(direct_vm)
+    adjudicate(contract, direct_vm, pass_id)
+    mock_fidelity(direct_vm, ["VIOLATED", "SATISFIED", "SATISFIED"])
+    adjudicate(contract, direct_vm, fail_id)
+    advance_to_deadline(direct_vm)
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    spy = install_transfer_spy(contract, monkeypatch)
+    contract.refund_unused(CHALLENGE)
+    direct_vm.sender = direct_bob
+    contract.settle_replication(CHALLENGE, pass_id)
+    assert spy.calls == [
+        ("0x" + direct_alice.hex(), REWARD),
+        ("0x" + direct_bob.hex(), REWARD),
+    ]
+    assert contract.get_challenge(CHALLENGE)["remaining_pool"] == 0
+
+
+def test_challenge_reserves_are_isolated(
+    direct_deploy,
+    direct_vm,
+    direct_alice,
+    monkeypatch,
+):
+    contract = deploy(direct_deploy)
+    first = CHALLENGE
+    second = "benchmark-2"
+    create(contract, direct_vm, direct_alice, challenge_id=first, slots=1, reward=REWARD)
+    direct_vm.sender = direct_alice
+    direct_vm.value = REWARD
+    contract.fund_challenge(first)
+    direct_vm.value = 0
+    contract.activate_challenge(first)
+    create(contract, direct_vm, direct_alice, challenge_id=second, slots=1, reward=REWARD)
+    direct_vm.sender = direct_alice
+    direct_vm.value = REWARD
+    contract.fund_challenge(second)
+    direct_vm.value = 0
+    contract.activate_challenge(second)
+    direct_vm.warp("2099-01-01T00:00:00Z")
+    contract.expire_challenge(first)
+    spy = install_transfer_spy(contract, monkeypatch)
+    contract.refund_unused(first)
+    assert spy.calls[-1] == ("0x" + direct_alice.hex(), REWARD)
+    assert contract.get_challenge(first)["state"] == "REFUNDED"
+    assert contract.get_challenge(first)["remaining_pool"] == 0
+    second_state = contract.get_challenge(second)
+    assert second_state["state"] == "OPEN"
+    assert second_state["remaining_pool"] == REWARD
 
 
 def test_fail_records_do_not_reserve_reward(

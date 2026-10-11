@@ -7,6 +7,7 @@ export const CHAIN_ID = 61997
 export const CHAIN_HEX = `0x${CHAIN_ID.toString(16)}`
 export const RPC_URL = 'https://studio-dev.genlayer.com/api'
 export const SOURCE_SHA256 = '5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b'
+export const CANDIDATE_SOURCE_SHA256 = 'ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3'
 export const SPONSOR = '0xa35dc047f9937bf668743efbdf8ea93b31a55888'
 export const LIVE_CHALLENGE_ID = 'reprobond-steward-consolidated-20261007-b'
 export const LIVE_REPLICATION_ID = 'e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e'

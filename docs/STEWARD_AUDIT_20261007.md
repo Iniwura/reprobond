@@ -258,3 +258,28 @@ Current source fingerprint:
 
 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
 
+## Steward rejection follow-up — local candidate only
+
+The live records above are historical and remain attributable to the
+historical corrected source. They do not prove the two newer recovery
+properties requested by the steward.
+
+The local correction candidate now has source SHA-256
+`ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3` and is
+not deployed, funded, or resubmitted.
+
+It adds a fixed 86,400-second recovery grace derived from each frozen UTC
+deadline using GenLayer transaction time. During grace, `SUBMITTED` and
+repairable `UNRESOLVED` records block expiry. At or after the recovery
+deadline, closure marks such records `ABANDONED`, preserving their evidence
+and history without falsely calling them `FAIL`.
+
+It also separates accounting into earned liability, outstanding PASS reserve,
+unused escrow, `refunded_total`, and remaining pool. Sponsor recovery returns
+only unused slot escrow and does not wait for unrelated unpaid PASS claims;
+the original PASS replicator remains able to settle after `REFUNDED`.
+
+No live transaction hash exists for these candidate changes yet. A fresh
+deployment and a funded live proof covering both defects require explicit
+approval and are intentionally outside this local correction turn.
+

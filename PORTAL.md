@@ -29,7 +29,7 @@ ReproBond reports a replication record and deterministic result. It does not cla
 
 ## Steward corrections
 
-The corrected deployment uses source SHA-256
+The historical corrected deployment uses source SHA-256
 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b.
 Canonical live challenge: reprobond-steward-consolidated-20261007-b.
 Canonical replication: e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e.
@@ -37,9 +37,14 @@ The live record proves PASS + -2500 bps + CONTRADICTS -> PAID, exact unused
 escrow refund, and replay rejection. The detailed record is
 docs/STEWARD_AUDIT_20261007.md.
 
+The steward-fix candidate in this repository has source SHA-256
+ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3. It is not
+deployed or represented by the historical live proof. It adds a fixed
+transaction-time recovery grace, explicit ABANDONED closure status, and
+protected PASS-reserve accounting.
+
 ## Deployment labeling
 
 The old address is historical v1 only. The displayed live proof is backed by
-the corrected deployment. The corrected release enforces deterministic
-deadlines, safe partial closure/refund, required-vs-optional evidence, and
-qualified-slot capacity.
+the historical corrected deployment. The new steward-fix candidate must not
+be described as live until it is separately deployed and audited.

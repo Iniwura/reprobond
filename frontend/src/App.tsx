@@ -241,7 +241,7 @@ function ChallengeDetail() {
       if (current.state !== 'OPEN' || !sameAddress(address, current.sponsor)) throw new Error('Authoritative state must be OPEN and the connected wallet must be the sponsor.')
       if (!isContractDeadlineReached(String(current.deadline_utc))) throw new Error('The frozen deadline has not been reached yet.')
       if (Number(current.qualified_count) >= Number(current.required_slot_count)) throw new Error('A complete challenge cannot use the partial expiry path.')
-      if (pending.length) throw new Error('Pending SUBMITTED or repairable UNRESOLVED work blocks closure.')
+      if (pending.length && !isContractDeadlineReached(String(current.recovery_deadline_utc || current.deadline_utc))) throw new Error('Pending work remains protected until the recovery grace deadline.')
       await writer.run('expire_challenge', [id])
     } catch (error) { setLocalError(errorMessage(error)) }
   }
@@ -251,9 +251,8 @@ function ChallengeDetail() {
     try {
       const fresh = await readChallengeState(id)
       const current = fresh.challenge
-      const unpaidPasses = fresh.replications.filter((item: any) => item.state === 'PASS')
       if (current.state !== 'EXPIRED' || !sameAddress(address, current.sponsor)) throw new Error('Authoritative state must be EXPIRED and the connected wallet must be the sponsor.')
-      if (unpaidPasses.length) throw new Error('Every earned PASS reward must be settled before refund.')
+      if (Number(current.refundable_remaining || 0) <= 0) throw new Error('No unused escrow remains available for sponsor recovery.')
       await writer.run('refund_unused', [id])
     } catch (error) { setLocalError(errorMessage(error)) }
   }
@@ -266,9 +265,14 @@ function ChallengeDetail() {
     const unpaidPasses = records.filter((item: any) => item.state === 'PASS').length
     const paidRecords = records.filter((item: any) => item.state === 'PAID').length
     const deadlineReached = isContractDeadlineReached(String(challenge.deadline_utc))
+    const recoveryDeadlineReached = isContractDeadlineReached(String(challenge.recovery_deadline_utc || challenge.deadline_utc))
     const sponsorOnChain = sameAddress(address, challenge.sponsor) && chainId === CHAIN_HEX
-    const canExpire = sponsorOnChain && challenge.state === 'OPEN' && deadlineReached && qualifiedSlots < requiredSlots && pending.length === 0 && writer.status.stage === 'idle'
-    const canRefund = sponsorOnChain && challenge.state === 'EXPIRED' && unpaidPasses === 0 && paidRecords === Number(challenge.paid_count || 0) && writer.status.stage === 'idle'
+    const earnedLiability = BigInt(challenge.earned_liability ?? qualifiedSlots * Number(challenge.reward_per_replication || 0))
+    const outstandingReserve = BigInt(challenge.outstanding_pass_reserve ?? Math.max(0, qualifiedSlots - Number(challenge.paid_count || 0)) * Number(challenge.reward_per_replication || 0))
+    const refundableUnused = BigInt(challenge.refundable_unused ?? BigInt(challenge.escrow_funded || 0) - earnedLiability)
+    const refundableRemaining = BigInt(challenge.refundable_remaining ?? refundableUnused - BigInt(challenge.refunded_total || 0))
+    const canExpire = sponsorOnChain && challenge.state === 'OPEN' && deadlineReached && qualifiedSlots < requiredSlots && (pending.length === 0 || recoveryDeadlineReached) && writer.status.stage === 'idle'
+    const canRefund = sponsorOnChain && challenge.state === 'EXPIRED' && refundableRemaining > 0n && Number(challenge.refunded_total || 0) === 0 && paidRecords === Number(challenge.paid_count || 0) && writer.status.stage === 'idle'
     return <>
       <PageIntro marker="CHALLENGE DOSSIER / AUTHORITATIVE" title={String(challenge.challenge_id)} copy={String(challenge.claim || LIVE_CLAIM)} action={<Link className="button button-quiet" to="/submit">Submit a replication →</Link>} />
       <div className="detail-meta">
@@ -289,12 +293,13 @@ function ChallengeDetail() {
           <div className="challenge-replications">{records.length ? records.map((replication: any) => <Link className="challenge-row compact" key={replication.replication_id} to={'/replications/' + encodeURIComponent(id) + '/' + encodeURIComponent(replication.replication_id)}><div className="row-index">↳</div><div><span className="marker">{short(replication.replicator, 10, 8)}</span><h2>{short(replication.replication_id, 14, 10)}</h2></div><div className="row-facts"><span><b>STATE</b><StateTag value={replication.state} /></span><span><b>RESULT</b><StateTag value={replication.result_direction || 'PENDING'} /></span></div><span className="row-arrow">↗</span></Link>) : <p className="muted-copy">No replication records are stored yet. Independent wallets can use the replication form while this challenge is OPEN.</p>}</div>
         </div>
         <aside className="detail-aside">
-          <div className="side-card"><span className="marker">DEADLINE</span><strong className="mono">{String(challenge.deadline_utc)}</strong>{challenge.state === 'OPEN' && !deadlineReached && <p>Expiry is unavailable until the frozen deadline is reached.</p>}{challenge.state === 'OPEN' && deadlineReached && pending.length > 0 && <p>Closure blocked: {pending.length} SUBMITTED or repairable UNRESOLVED record(s) still need adjudication or repair.</p>}{challenge.state === 'OPEN' && deadlineReached && pending.length === 0 && qualifiedSlots < requiredSlots && <p>No pending work remains. The sponsor may close this partial challenge.</p>}{challenge.state === 'EXPIRED' && <p>{unpaidPasses} unpaid PASS reward(s) remain. Refund becomes available only after they are settled.</p>}{challenge.state === 'REFUNDED' && <p>Final state. Paid rewards remain preserved; only unused escrow was returned.</p>}</div>
+          <div className="side-card"><span className="marker">DEADLINE / RECOVERY WINDOW</span><strong className="mono">{String(challenge.deadline_utc)}</strong><small className="mono">Recovery deadline: {String(challenge.recovery_deadline_utc || '—')}</small>{challenge.state === 'OPEN' && !deadlineReached && <p>New submissions, funding, and activation close at the frozen deadline.</p>}{challenge.state === 'OPEN' && deadlineReached && pending.length > 0 && !recoveryDeadlineReached && <p>Closure blocked during grace: {pending.length} SUBMITTED or repairable UNRESOLVED record(s) remain protected until recovery.</p>}{challenge.state === 'OPEN' && deadlineReached && pending.length > 0 && recoveryDeadlineReached && <p>Recovery grace has expired. Closing now marks abandoned pending work ABANDONED without relabeling it FAIL.</p>}{challenge.state === 'OPEN' && deadlineReached && pending.length === 0 && qualifiedSlots < requiredSlots && <p>No pending work remains. The sponsor may close this partial challenge.</p>}{challenge.state === 'EXPIRED' && <p>{unpaidPasses} earned PASS reward(s) remain reserved and payable. Unused escrow recovery is independent of those reserves.</p>}{challenge.state === 'REFUNDED' && <p>Unused escrow was returned. {outstandingReserve > 0n ? 'Outstanding PASS reserves remain payable to their original replicators.' : 'No reward reserve remains outstanding.'}</p>}</div>
+          <div className="side-card"><span className="marker">ESCROW ACCOUNTING</span><div className="balance-row"><span>EARNED LIABILITY</span><b>{formatGen(earnedLiability)}</b></div><div className="balance-row"><span>PAID REWARDS</span><b>{formatGen(BigInt(challenge.paid_total || 0))}</b></div><div className="balance-row"><span>UNPAID PASS RESERVE</span><b>{formatGen(outstandingReserve)}</b></div><div className="balance-row"><span>UNUSED ESCROW</span><b>{formatGen(refundableUnused)}</b></div><div className="balance-row"><span>REFUNDED TOTAL</span><b>{formatGen(BigInt(challenge.refunded_total || 0))}</b></div><div className="balance-row"><span>REFUNDABLE NOW</span><b>{formatGen(refundableRemaining)}</b></div><p>Reserved PASS rewards are never shown as refundable.</p></div>
           <div className="side-card"><span className="marker">REPLICATION SLOTS</span><div className="slot-rail">{Array.from({ length: requiredSlots }, (_, index) => <span className={index < qualifiedSlots ? 'filled' : ''} key={index}>{String(index + 1).padStart(2, '0')}</span>)}</div><p>{ids.length} total record(s) submitted. {qualifiedSlots} / {requiredSlots} qualified slot(s) are occupied; {requiredSlots - qualifiedSlots} remain open.</p></div>
           <div className="side-card"><span className="marker">AGGREGATE</span><strong className="aggregate-value">{String(challenge.aggregate_result || 'NOT_READY').replaceAll('_', ' ')}</strong><p>Aggregate vocabulary describes replication directions. It does not label the original claim true or false.</p></div>
           {canExpire && <button className="button button-dark full" onClick={() => void expire()}>Expire / close challenge</button>}
-          {challenge.state === 'OPEN' && deadlineReached && pending.length > 0 && <div className="tx-notice bad"><strong>Closure blocked by pending work.</strong><span>Resolve every SUBMITTED record and every repairable UNRESOLVED revision first.</span></div>}
-          {challenge.state === 'EXPIRED' && <div className="side-card"><span className="marker">SPONSOR REFUND</span><strong>{formatGen(BigInt(challenge.escrow_funded || 0) - BigInt(challenge.paid_total || 0))} unused</strong><p>Paid rewards: {formatGen(BigInt(challenge.paid_total || 0))}. Earned PASS rewards cannot be reclaimed.</p>{canRefund && <button className="button button-dark full" onClick={() => void refund()}>Refund unused escrow</button>}</div>}
+          {challenge.state === 'OPEN' && deadlineReached && pending.length > 0 && !recoveryDeadlineReached && <div className="tx-notice bad"><strong>Closure protected by recovery grace.</strong><span>Pending work can still be adjudicated or repaired before the recovery deadline.</span></div>}
+          {challenge.state === 'EXPIRED' && <div className="side-card"><span className="marker">SPONSOR RECOVERY</span><strong>{formatGen(refundableRemaining)} available</strong><p>Unused escrow excludes earned PASS liabilities. A PASS owner can claim its reserved reward even after sponsor recovery.</p>{canRefund && <button className="button button-dark full" onClick={() => void refund()}>Recover unused escrow</button>}</div>}
           {localError && <div className="inline-error">{localError}</div>}
           {writer.status.stage !== 'idle' && <TxNotice status={writer.status} />}
         </aside>
@@ -313,7 +318,7 @@ function ReplicationDetail() {
     if (!replication) return <div className="error-box"><strong>Replication record unavailable</strong><span>Check the challenge ID and replication ID, then retry the authoritative read.</span></div>
     const criteria = arr(replication.criteria, [])
     const canWrite = Boolean(address) && chainId === CHAIN_HEX
-    const settleAllowed = replication.state === 'PASS' && sameAddress(address, replication.replicator) && ['OPEN', 'COMPLETE', 'EXPIRED'].includes(String(challenge.state))
+    const settleAllowed = replication.state === 'PASS' && sameAddress(address, replication.replicator) && ['OPEN', 'COMPLETE', 'EXPIRED', 'REFUNDED'].includes(String(challenge.state))
     return <>
       <PageIntro marker="REPLICATION DOSSIER / IMMUTABLE RECORD" title={short(replication.replication_id, 15, 10)} copy="The contract stores the manifest, raw packet, fidelity record, deterministic result, and payout fingerprint as one auditable replication revision." action={<StateTag value={replication.state} />} />
       <div className="detail-meta"><Meta label="CHALLENGE" value={short(challenge.challenge_id, 12, 8)} /><Meta label="REPLICATOR" value={short(replication.replicator, 10, 8)} /><Meta label="REVISION" value={String(replication.revision)} /><Meta label="FIDELITY"><StateTag value={replication.fidelity_status || replication.state} /></Meta></div>

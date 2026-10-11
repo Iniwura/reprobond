@@ -170,7 +170,7 @@ async function deploy() {
   state.sha = await sha256(CONTRACT_SOURCE)
   $('source-sha').textContent = state.sha
   $('source-bytes').textContent = String(new TextEncoder().encode(CONTRACT_SOURCE).length)
-  write('READY', { chainId: CHAIN_ID, chainHex: CHAIN_HEX, sponsor: SPONSOR, sourceSha256: state.sha, expectedSourceSha256: '5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b', sourceMatchesExpected: state.sha === '5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b' })
+  write('READY', { chainId: CHAIN_ID, chainHex: CHAIN_HEX, sponsor: SPONSOR, sourceSha256: state.sha, expectedSourceSha256: 'ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3', sourceMatchesExpected: state.sha === 'ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3' })
   try { await discoverProviders() } catch (error) { errorText(error) }
 })()
 providerSelect.addEventListener('change', () => {

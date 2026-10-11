@@ -46,10 +46,10 @@ function contractDeadline(date) {
 function localDeadline(value) {
   return contractDeadline(new Date(value))
 }
-function closureActions({ state, deadlineReached, pending, qualified, required, unpaidPasses, paidCount, paidRecords, sponsor, chainOk }) {
+function closureActions({ state, deadlineReached, recoveryDeadlineReached = false, pending, qualified, required, paidCount, paidRecords, refundableRemaining = 0, refundedTotal = 0, sponsor, chainOk }) {
   return {
-    canExpire: sponsor && chainOk && state === 'OPEN' && deadlineReached && pending === 0 && qualified < required,
-    canRefund: sponsor && chainOk && state === 'EXPIRED' && unpaidPasses === 0 && paidCount === paidRecords,
+    canExpire: sponsor && chainOk && state === 'OPEN' && deadlineReached && (pending === 0 || recoveryDeadlineReached) && qualified < required,
+    canRefund: sponsor && chainOk && state === 'EXPIRED' && refundableRemaining > 0 && refundedTotal === 0 && paidCount === paidRecords,
   }
 }
 
@@ -98,16 +98,17 @@ test('qualified_count, not total record count, controls submission capacity', ()
 })
 
 test('pending submitted work blocks expiry while terminal partial state can close', () => {
-  assert.equal(closureActions({ state: 'OPEN', deadlineReached: true, pending: 1, qualified: 0, required: 2, unpaidPasses: 0, paidCount: 0, paidRecords: 0, sponsor: true, chainOk: true }).canExpire, false)
-  assert.equal(closureActions({ state: 'OPEN', deadlineReached: true, pending: 0, qualified: 1, required: 2, unpaidPasses: 0, paidCount: 0, paidRecords: 0, sponsor: true, chainOk: true }).canExpire, true)
+  assert.equal(closureActions({ state: 'OPEN', deadlineReached: true, recoveryDeadlineReached: false, pending: 1, qualified: 0, required: 2, paidCount: 0, paidRecords: 0, sponsor: true, chainOk: true }).canExpire, false)
+  assert.equal(closureActions({ state: 'OPEN', deadlineReached: true, recoveryDeadlineReached: true, pending: 1, qualified: 0, required: 2, paidCount: 0, paidRecords: 0, sponsor: true, chainOk: true }).canExpire, true)
+  assert.equal(closureActions({ state: 'OPEN', deadlineReached: true, pending: 0, qualified: 1, required: 2, paidCount: 0, paidRecords: 0, sponsor: true, chainOk: true }).canExpire, true)
 })
 
-test('earned PASS remains visible after expiry and refund waits for payout', () => {
-  assert.equal(closureActions({ state: 'EXPIRED', deadlineReached: true, pending: 0, qualified: 1, required: 2, unpaidPasses: 1, paidCount: 0, paidRecords: 0, sponsor: true, chainOk: true }).canRefund, false)
-  assert.equal(closureActions({ state: 'EXPIRED', deadlineReached: true, pending: 0, qualified: 1, required: 2, unpaidPasses: 0, paidCount: 1, paidRecords: 1, sponsor: true, chainOk: true }).canRefund, true)
+test('earned PASS remains reserved while unrelated unused escrow is recoverable', () => {
+  assert.equal(closureActions({ state: 'EXPIRED', deadlineReached: true, pending: 0, qualified: 1, required: 2, paidCount: 0, paidRecords: 0, refundableRemaining: 100, sponsor: true, chainOk: true }).canRefund, true)
+  assert.equal(closureActions({ state: 'EXPIRED', deadlineReached: true, pending: 0, qualified: 1, required: 2, paidCount: 0, paidRecords: 0, refundableRemaining: 0, sponsor: true, chainOk: true }).canRefund, false)
 })
 
-test('refund remains disabled after expired state until every PASS is PAID', () => {
-  const before = closureActions({ state: 'EXPIRED', deadlineReached: true, pending: 0, qualified: 1, required: 2, unpaidPasses: 0, paidCount: 0, paidRecords: 1, sponsor: true, chainOk: true })
+test('refund is disabled after it has already been processed', () => {
+  const before = closureActions({ state: 'EXPIRED', deadlineReached: true, pending: 0, qualified: 1, required: 2, paidCount: 0, paidRecords: 0, refundableRemaining: 0, refundedTotal: 100, sponsor: true, chainOk: true })
   assert.equal(before.canRefund, false)
 })

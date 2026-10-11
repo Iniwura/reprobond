@@ -22,8 +22,11 @@
 20. Native transfers are isolated: rewards and unused escrow use the narrow supported native-transfer path; no internal-credit substitute exists.
 21. Deadline enforcement uses deterministic transaction time, never host wall-clock time.
 22. Deadline closes new participation only; already-submitted work remains resolvable and settleable after the deadline.
-23. Expiry cannot close while SUBMITTED or repairable UNRESOLVED work exists.
-24. Terminal UNRESOLVED is never relabeled as FAIL merely to enable expiry.
-25. PASS entitlements survive EXPIRED; refund cannot execute while any PASS is unpaid.
-26. Refund equals escrow_funded - paid_total, cannot exceed unused escrow, and is one-shot.
+23. Expiry cannot close while SUBMITTED or repairable UNRESOLVED work exists during the recovery grace period.
+24. After grace, pending work becomes explicit ABANDONED, never FAIL; abandoned records cannot qualify or pay and their evidence/history remain queryable.
+25. PASS entitlements survive EXPIRED and REFUNDED; closure cannot erase earned liabilities.
+26. `earned_liability = qualified_count * reward_per_replication`; sponsor recovery equals `escrow_funded - earned_liability`, never an earned PASS reserve.
 27. Qualified slot capacity is qualified_count, not total replication record count.
+28. `refunded_total` is explicit and one-shot; every later payout subtracts prior refunds.
+29. A PASS owner can claim its reserved reward after sponsor refund, but only the stored replicator can settle.
+30. `remaining_pool = escrow_funded - paid_total - refunded_total` is checked per challenge, preventing cross-challenge accounting reuse.

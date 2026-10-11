@@ -48,7 +48,7 @@ flowchart LR
 
 The historical v1 contract is preserved for audit reference. The corrected contract is deployed separately only after the revised source passes local and live verification.
 
-## Corrected production deployment
+## Historical corrected deployment
 
 - Contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
 - Network: Studio Dev, chain 61997
@@ -58,6 +58,18 @@ The historical v1 contract is preserved for audit reference. The corrected contr
 - Verified outcome: PASS + -2500 bps + CONTRADICTS -> PAID
 - Native reward: 1 wei; unused escrow refunded: 1 wei
 - Detailed audit: docs/STEWARD_AUDIT_20261007.md
+
+This deployment is historical and does not claim the bounded-recovery or
+protected-reserve correction below.
+
+## Steward correction candidate — not deployed
+
+- Candidate source SHA-256: ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3
+- Fixed recovery grace: 86,400 transaction-time seconds after each frozen deadline.
+- Pending `SUBMITTED` or repairable `UNRESOLVED` records become explicit `ABANDONED` after grace; they are never relabeled `FAIL` and never qualify or pay.
+- `refund_unused` returns only `escrow_funded - earned_liability`, records `refunded_total`, and does not wait for unrelated unpaid PASS claims.
+- An original PASS replicator may settle its reserved reward after sponsor recovery.
+- This candidate has not been deployed, funded, or live-audited.
 
 ## Historical v1 deployment
 
@@ -104,6 +116,7 @@ Contract checks are documented in docs/DEPLOYMENT_AUDIT.md.
 
 ## Steward corrections
 
-The corrected source is deployed at the new address above. The old address
-0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc remains historical v1 only.
-Reviewer corrections are documented in docs/REVIEWER_CORRECTIONS.md.
+The deployed address above remains the historical corrected deployment. The
+old address 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc remains historical v1
+only. The new bounded-recovery/protected-reserve candidate is documented in
+docs/REVIEWER_CORRECTIONS.md and requires a fresh deployment and live proof.

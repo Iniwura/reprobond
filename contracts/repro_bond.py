@@ -3,7 +3,7 @@
 import hashlib
 import ipaddress
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -27,6 +27,7 @@ PASS = "PASS"
 FAIL = "FAIL"
 UNRESOLVED = "UNRESOLVED"
 PAID = "PAID"
+ABANDONED = "ABANDONED"
 
 SATISFIED = "SATISFIED"
 VIOLATED = "VIOLATED"
@@ -60,13 +61,14 @@ MAX_RUN_VALUE = 10**12
 MAX_SLOTS = 16
 MAX_REPLICATION_RECORDS = 64
 MAX_REPAIRS = 2
+RECOVERY_GRACE_SECONDS = 24 * 60 * 60
 MAX_REWARD = 10**24
 MAX_THRESHOLD_BPS = 100000
 MAX_REASONING = 1200
 MAX_DEADLINE = 32
 
 CHALLENGE_STATES = {DRAFT, FUNDED, OPEN, COMPLETE, EXPIRED, REFUNDED}
-REPLICATION_STATES = {SUBMITTED, PASS, FAIL, UNRESOLVED, PAID}
+REPLICATION_STATES = {SUBMITTED, PASS, FAIL, UNRESOLVED, PAID, ABANDONED}
 CRITERION_STATUSES = {SATISFIED, VIOLATED, CRITERION_UNRESOLVED}
 MANIFEST_KEYS = {"evidence_id", "url", "sha256"}
 CRITERION_KEYS = {"criterion_id", "requirement", "semantics"}
@@ -99,6 +101,7 @@ class ChallengeRecord:
     reward_per_replication: u256
     expected_escrow: u256
     deadline_utc: str
+    recovery_deadline_utc: str
     fingerprint: str
     state: str
     escrow_funded: u256
@@ -106,6 +109,7 @@ class ChallengeRecord:
     adjudicated_count: u256
     paid_count: u256
     paid_total: u256
+    refunded_total: u256
 
 
 @gl.storage.allow
@@ -128,6 +132,7 @@ class ReplicationRecord:
     result_fingerprint: str
     history_json: str
     payout_fingerprint: str
+    abandonment_reason: str
 
 
 def _canonical(value: Any) -> str:
@@ -335,6 +340,13 @@ def _transaction_utc() -> datetime:
 
 def _deadline_reached(deadline_utc: str) -> bool:
     return _transaction_utc() >= _parse_utc(deadline_utc, "deadline_utc")
+
+
+def _recovery_deadline(deadline_utc: str) -> str:
+    return (
+        _parse_utc(deadline_utc, "deadline_utc")
+        + timedelta(seconds=RECOVERY_GRACE_SECONDS)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _require_deadline_open(deadline_utc: str, action: str) -> None:
@@ -773,12 +785,57 @@ class ReproBond(gl.contract.Contract):
             "result_direction": record.result_direction,
             "result_fingerprint": record.result_fingerprint,
             "payout_fingerprint": record.payout_fingerprint,
+            "abandonment_reason": record.abandonment_reason,
         }
 
     def _emit_native_transfer(self, recipient: Address, amount: u256) -> None:
         if int(amount) <= 0:
             raise gl.vm.UserError("native transfer amount must be positive.")
         _Recipient(recipient).emit_transfer(value=amount)
+
+    def _earned_liability(self, challenge: ChallengeRecord) -> int:
+        return int(challenge.qualified_count) * int(challenge.reward_per_replication)
+
+    def _outstanding_pass_reserve(self, challenge: ChallengeRecord) -> int:
+        earned = self._earned_liability(challenge)
+        paid = int(challenge.paid_total)
+        if paid < 0 or paid > earned:
+            raise gl.vm.UserError("paid reward exceeds earned liability.")
+        return earned - paid
+
+    def _refundable_unused(self, challenge: ChallengeRecord) -> int:
+        earned = self._earned_liability(challenge)
+        escrow = int(challenge.escrow_funded)
+        if earned < 0 or earned > escrow:
+            raise gl.vm.UserError("earned liability exceeds funded escrow.")
+        return escrow - earned
+
+    def _refundable_remaining(self, challenge: ChallengeRecord) -> int:
+        unused = self._refundable_unused(challenge)
+        refunded = int(challenge.refunded_total)
+        if refunded < 0 or refunded > unused:
+            raise gl.vm.UserError("refunded amount exceeds unused escrow.")
+        return unused - refunded
+
+    def _remaining_pool(self, challenge: ChallengeRecord) -> int:
+        escrow = int(challenge.escrow_funded)
+        paid = int(challenge.paid_total)
+        refunded = int(challenge.refunded_total)
+        remaining = escrow - paid - refunded
+        if remaining < 0:
+            raise gl.vm.UserError("challenge accounting exceeds funded escrow.")
+        return remaining
+
+    def _abandon_replication(self, replication: ReplicationRecord) -> None:
+        history = _decode_json(replication.history_json, "replication history is invalid.")
+        if type(history) is not list:
+            raise gl.vm.UserError("replication history is invalid.")
+        snapshot = self._history_snapshot(replication)
+        snapshot["event"] = "ABANDONED_AFTER_RECOVERY_GRACE"
+        history.append(snapshot)
+        replication.state = ABANDONED
+        replication.abandonment_reason = "RECOVERY_GRACE_EXPIRED"
+        replication.history_json = _canonical(history)
 
     def _aggregate(self, challenge: ChallengeRecord) -> str:
         if int(challenge.qualified_count) < int(challenge.required_slot_count):
@@ -857,8 +914,9 @@ class ReproBond(gl.contract.Contract):
         sponsor = _address(gl.message.sender_address)
         sponsor_key = _address_key(sponsor)
         expected_escrow = required_slot_count * reward_per_replication
+        recovery_deadline_utc = _recovery_deadline(deadline_utc)
         fingerprint = _digest(
-            "REPROBOND-CHALLENGE-V1",
+            "REPROBOND-CHALLENGE-V2",
             {
                 "schema_version": SCHEMA_VERSION,
                 "challenge_id": challenge_id,
@@ -873,6 +931,8 @@ class ReproBond(gl.contract.Contract):
                 "reward_per_replication": reward_per_replication,
                 "expected_escrow": expected_escrow,
                 "deadline_utc": deadline_utc,
+                "recovery_grace_seconds": RECOVERY_GRACE_SECONDS,
+                "recovery_deadline_utc": recovery_deadline_utc,
             },
         )
         self.challenges[challenge_id] = ChallengeRecord(
@@ -888,8 +948,10 @@ class ReproBond(gl.contract.Contract):
             reward_per_replication,
             expected_escrow,
             deadline_utc,
+            recovery_deadline_utc,
             fingerprint,
             DRAFT,
+            0,
             0,
             0,
             0,
@@ -1002,6 +1064,7 @@ class ReproBond(gl.contract.Contract):
             "",
             "[]",
             "",
+            "",
         )
         self.sender_replication_ids[index_key] = replication_id
         self._append_challenge_id(challenge.challenge_id, replication_id)
@@ -1062,6 +1125,7 @@ class ReproBond(gl.contract.Contract):
         replication.result_fingerprint = ""
         replication.history_json = _canonical(history)
         replication.payout_fingerprint = ""
+        replication.abandonment_reason = ""
         self.replications[replication.replication_id] = replication
         return submission_fingerprint
 
@@ -1210,7 +1274,7 @@ class ReproBond(gl.contract.Contract):
         replication_id: str,
     ) -> str:
         challenge = self._challenge(_identifier(challenge_id, "challenge_id", MAX_CHALLENGE_ID))
-        if challenge.state not in {OPEN, COMPLETE, EXPIRED}:
+        if challenge.state not in {OPEN, COMPLETE, EXPIRED, REFUNDED}:
             raise gl.vm.UserError("challenge is not settleable in this state.")
         replication = self._replication(_identifier(replication_id, "replication_id", 64))
         if replication.challenge_id != challenge.challenge_id:
@@ -1220,11 +1284,12 @@ class ReproBond(gl.contract.Contract):
         if _address_key(gl.message.sender_address) != _address_key(replication.replicator):
             raise gl.vm.UserError("only the stored replicator may settle its reward.")
         reward = int(challenge.reward_per_replication)
-        remaining = int(challenge.escrow_funded) - int(challenge.paid_total)
-        if reward <= 0 or reward > remaining:
+        remaining = self._remaining_pool(challenge)
+        outstanding = self._outstanding_pass_reserve(challenge)
+        if reward <= 0 or reward > remaining or reward > outstanding:
             raise gl.vm.UserError("escrow cannot cover this reward.")
         payout_fingerprint = _digest(
-            "REPROBOND-PAYOUT-V1",
+            "REPROBOND-PAYOUT-V2",
             {
                 "challenge_id": challenge.challenge_id,
                 "replication_id": replication.replication_id,
@@ -1233,6 +1298,9 @@ class ReproBond(gl.contract.Contract):
                 "recipient": _address_key(replication.replicator),
                 "amount": reward,
                 "result_direction": replication.result_direction,
+                "paid_total_before": int(challenge.paid_total),
+                "refunded_total": int(challenge.refunded_total),
+                "remaining_pool_before": remaining,
             },
         )
         replication.state = PAID
@@ -1251,24 +1319,44 @@ class ReproBond(gl.contract.Contract):
             raise gl.vm.UserError("only an incomplete OPEN challenge may expire.")
         if _address_key(gl.message.sender_address) != _address_key(challenge.sponsor):
             raise gl.vm.UserError("only the sponsor may expire this challenge.")
-        if not _deadline_reached(challenge.deadline_utc):
+        transaction_time = _transaction_utc()
+        if transaction_time < _parse_utc(challenge.deadline_utc, "deadline_utc"):
             raise gl.vm.UserError("challenge deadline has not been reached.")
         if int(challenge.qualified_count) >= int(challenge.required_slot_count):
             raise gl.vm.UserError("completed challenge cannot use partial expiry.")
+        recovery_reached = transaction_time >= _parse_utc(
+            challenge.recovery_deadline_utc,
+            "recovery_deadline_utc",
+        )
+        abandoned: list[str] = []
         for replication_id in self._challenge_ids(challenge.challenge_id):
             replication = self._replication(replication_id)
             if replication.state == SUBMITTED:
-                raise gl.vm.UserError("SUBMITTED replication blocks expiry.")
-            if replication.state == UNRESOLVED and int(replication.revision) <= MAX_REPAIRS:
-                raise gl.vm.UserError("repairable UNRESOLVED replication blocks expiry.")
+                if not recovery_reached:
+                    raise gl.vm.UserError(
+                        "SUBMITTED replication blocks expiry during the recovery grace period."
+                    )
+                self._abandon_replication(replication)
+                self.replications[replication.replication_id] = replication
+                abandoned.append(replication.replication_id)
+            elif replication.state == UNRESOLVED and int(replication.revision) <= MAX_REPAIRS:
+                if not recovery_reached:
+                    raise gl.vm.UserError(
+                        "repairable UNRESOLVED replication blocks expiry during the recovery grace period."
+                    )
+                self._abandon_replication(replication)
+                self.replications[replication.replication_id] = replication
+                abandoned.append(replication.replication_id)
         challenge.state = EXPIRED
         self.challenges[challenge.challenge_id] = challenge
         return _digest(
-            "REPROBOND-EXPIRY-V2",
+            "REPROBOND-EXPIRY-V3",
             {
                 "challenge_id": challenge.challenge_id,
                 "challenge_fingerprint": challenge.fingerprint,
                 "qualified_count": int(challenge.qualified_count),
+                "recovery_deadline_utc": challenge.recovery_deadline_utc,
+                "abandoned_replication_ids": abandoned,
             },
         )
 
@@ -1279,15 +1367,16 @@ class ReproBond(gl.contract.Contract):
             raise gl.vm.UserError("only EXPIRED challenges can refund.")
         if _address_key(gl.message.sender_address) != _address_key(challenge.sponsor):
             raise gl.vm.UserError("only the sponsor may refund unused escrow.")
+        if int(challenge.refunded_total) != 0:
+            raise gl.vm.UserError("unused escrow has already been refunded.")
 
         qualified_records = 0
         paid_records = 0
         for replication_id in self._challenge_ids(challenge.challenge_id):
             replication = self._replication(replication_id)
-            if replication.state == PASS:
-                raise gl.vm.UserError("all PASS replications must be paid first.")
-            if replication.state == PAID:
+            if replication.state in {PASS, PAID}:
                 qualified_records += 1
+            if replication.state == PAID:
                 paid_records += 1
         if qualified_records != int(challenge.qualified_count):
             raise gl.vm.UserError("qualified replication accounting is inconsistent.")
@@ -1296,9 +1385,12 @@ class ReproBond(gl.contract.Contract):
         expected_paid_total = paid_records * int(challenge.reward_per_replication)
         if expected_paid_total != int(challenge.paid_total):
             raise gl.vm.UserError("paid reward accounting is inconsistent.")
-        refund = int(challenge.escrow_funded) - int(challenge.paid_total)
+        refund = self._refundable_unused(challenge)
         if refund < 0 or refund > int(challenge.escrow_funded):
             raise gl.vm.UserError("refund exceeds unused escrow.")
+        if int(challenge.paid_total) + int(challenge.refunded_total) > int(challenge.escrow_funded):
+            raise gl.vm.UserError("refund would exceed the remaining escrow.")
+        challenge.refunded_total = refund
         challenge.state = REFUNDED
         self.challenges[challenge.challenge_id] = challenge
         if refund > 0:
@@ -1322,6 +1414,8 @@ class ReproBond(gl.contract.Contract):
             "reward_per_replication": int(challenge.reward_per_replication),
             "expected_escrow": int(challenge.expected_escrow),
             "deadline_utc": challenge.deadline_utc,
+            "recovery_grace_seconds": RECOVERY_GRACE_SECONDS,
+            "recovery_deadline_utc": challenge.recovery_deadline_utc,
             "fingerprint": challenge.fingerprint,
             "state": challenge.state,
             "escrow_funded": int(challenge.escrow_funded),
@@ -1329,6 +1423,12 @@ class ReproBond(gl.contract.Contract):
             "adjudicated_count": int(challenge.adjudicated_count),
             "paid_count": int(challenge.paid_count),
             "paid_total": int(challenge.paid_total),
+            "refunded_total": int(challenge.refunded_total),
+            "earned_liability": self._earned_liability(challenge),
+            "outstanding_pass_reserve": self._outstanding_pass_reserve(challenge),
+            "refundable_unused": self._refundable_unused(challenge),
+            "refundable_remaining": self._refundable_remaining(challenge),
+            "remaining_pool": self._remaining_pool(challenge),
             "aggregate_result": self._aggregate(challenge),
         }
 
@@ -1365,6 +1465,7 @@ class ReproBond(gl.contract.Contract):
             "result_direction": replication.result_direction,
             "result_fingerprint": replication.result_fingerprint,
             "payout_fingerprint": replication.payout_fingerprint,
+            "abandonment_reason": replication.abandonment_reason,
             "history_length": len(_decode_json(replication.history_json, "replication history is invalid.")),
         }
 
