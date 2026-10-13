@@ -7,11 +7,14 @@
 - Network target: Studio Dev, chain 61997
 - Installed CLI: GenLayer 0.40.0-rc.3
 - Installed lint/runtime gates: genvm-lint 0.11.0, Python 3.12.3, pinned Direct Mode environment in /home/ini/materialproof/.venv.
-- Deployment status: not deployed; deployment and funding require explicit approval after local audit.
+- Deployment status: deployed to Studio Dev after explicit deployment approval; challenge funding remains separately unauthorized.
+- Current deployment: 0x33735bbaa9595FBB1b8a9fFCC3A91103911baEdC
+- Deployment transaction: 0x96fc388280e501c1790b5844f76ebc4a7fb8e032d22a907ef52eb2e19978530e
+- Deployment result: FINALIZED / ACCEPTED / FINISHED_WITH_RETURN / MAJORITY_AGREE
 - Historical corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
 - Historical deployment transaction: 0x4e274c6d87bbe2b51b17c1c17df577b79960705c96e34920854c92502aecc9d4
-- Canonical live challenge: reprobond-steward-consolidated-20261007-b
-- Canonical replication: e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e
+- Canonical live challenge: none on this deployment yet
+- Canonical replication: none on this deployment yet
 - Live audit: docs/STEWARD_AUDIT_20261007.md
 
 The historical v1 contract at 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc remains unchanged. Neither historical deployment includes the steward-fix candidate in this document.
@@ -19,22 +22,36 @@ The historical v1 contract at 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc remains
 The candidate adds a fixed 86,400-second transaction-time recovery grace,
 explicit ABANDONED closure status, and protected PASS-reserve accounting.
 
+The current deployment source hash is
+`ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`, matching
+the local candidate. The deployed constructor is zero-argument and the
+authoritative deployed schema contains the exact 15-method candidate schema.
+The deployment was created independently of the historical challenge records.
+Authoritative view calls are currently blocked by a Studio Dev RPC error before
+contract execution; no new challenge is being created or funded while that
+condition persists.
+
 ## Local gates — current candidate
 
-Rerun on 2026-10-11 against source SHA
+Rerun on 2026-10-13 against source SHA
 `ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`:
 
 - Direct Mode: **115 passed**.
 - Python syntax: **passed**.
 - GenVM lint: **passed**, 3 checks.
-- GenVM validation: **passed**, 15 methods (6 views, 9 writes).
+- GenVM validation: **blocked by missing cached runner artifact** for dependency
+  `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`; this is a
+  tooling-cache failure, not a contract execution result.
 - GenVM schema extraction: **passed**, exact 15-method schema.
-- GenVM typecheck: **passed**, no type errors.
+- GenVM typecheck: **blocked by the same missing cached runner artifact**.
 - Frontend protocol tests: **20 passed**.
 - Frontend TypeScript and production build: **passed**.
 
-These are local candidate checks only. No deployment, funding, or live
-transaction was performed for this source revision.
+The authoritative deployed source and schema were separately verified with the
+Studio Dev CLI. Direct Mode and frontend results are local candidate checks;
+the live proof remains pending. The current read/fee boundary is:
+`gen_call` and `sim_estimateTransactionFees` return Studio Dev error
+`Can't reconnect until invalid transaction is rolled back. Please rollback() fully before proceeding`.
 
 ## Exact generated schema
 

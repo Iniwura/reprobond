@@ -281,5 +281,72 @@ the original PASS replicator remains able to settle after `REFUNDED`.
 
 No live transaction hash exists for these candidate changes yet. A fresh
 deployment and a funded live proof covering both defects require explicit
-approval and are intentionally outside this local correction turn.
+approval and remain pending below.
+
+## Fresh corrected deployment — pre-live-proof status
+
+The corrected source is now deployed, without changing any historical
+deployment:
+
+- Current contract: `0x33735bbaa9595FBB1b8a9fFCC3A91103911baEdC`
+- Network: GenLayer Studio Dev, chain `61997`
+- Deployment transaction: `0x96fc388280e501c1790b5844f76ebc4a7fb8e032d22a907ef52eb2e19978530e`
+- Deployment status: `FINALIZED`, `ACCEPTED`
+- Execution: `FINISHED_WITH_RETURN`
+- Consensus: `MAJORITY_AGREE`
+- Source SHA-256: `ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`
+- Constructor: `ReproBond()` with zero arguments
+- Deployed schema: exact 15-method schema; source verification passed
+
+Read-only artifact preflight for the planned two-slot recovery challenge
+passed, but authoritative contract-view reads are currently blocked by Studio
+Dev before the challenge can be safely inspected:
+
+- raw RPC contract balance read at the time of this audit: `2 wei`; challenge
+  accounting cannot be inferred from that balance alone
+- proposed challenge existence/fingerprint: not currently verifiable because
+  `gen_call` fails before contract execution
+- public fixture bytes were fetched from the commit-pinned `d12e3d1e6594010abcef543ae6a6325f9efe3a01` URLs and matched local bytes
+- methodology raw SHA-256: `54af85766468e346123782b45710087c565e4bb0de0f5186b07765def576615a`
+- environment raw SHA-256: `ea4c4ffb350fce835aa9c318b7b6d59c3a8d04b476dc752ce247a2224a62abe3`
+- results raw SHA-256: `b3bfbed7c7010cba51564297fbe79787644e8cd34c0701baa1a39698d744db05`
+- previously proven Studio-rendered methodology SHA-256 for identical bytes:
+  `c124fdfed85d6ef4ef3f301c854994187151f3f35587d37166dbbde3f59bccac`
+
+The planned live demonstration is not claimed complete. It still requires a
+working authoritative Studio Dev `gen_call`/fee-simulation path, one
+consolidated authorization for any new GEN spending, challenge creation, and
+exact `2 wei` funding.
+The proposed sequence is:
+
+1. sponsor creates and funds a two-slot challenge;
+2. two distinct unlocked non-sponsor accounts submit, with one correct
+   methodology commitment and one deliberately mismatched commitment;
+3. the first record adjudicates `PASS` and the second `UNRESOLVED`;
+4. expiry is rejected during the 24-hour recovery grace, then succeeds after
+   grace by marking only the repairable unresolved record `ABANDONED`;
+5. sponsor refunds exactly `1 wei` of unused escrow;
+6. the PASS replicator settles exactly `1 wei` afterward; a replay is rejected.
+
+All later states, transaction hashes, balances, and fee accounting remain
+pending live execution and must not be represented as completed evidence.
+
+## Current execution blocker — 2026-10-13
+
+The installed CLI account path is available and was verified without exposing
+private-key material: the `dissent-studio` keychain entry resolves in memory to
+the configured sponsor `0xa35dc047f9937bf668743efbdf8ea93b31a55888`. The
+underlying `genlayer-js 2.0.0-rc.1` client accepts nonzero payable values and
+the installed CLI source hardcodes `value: 0n` only in the convenience
+`genlayer write` command.
+
+The current Studio Dev RPC does not permit safe continuation. Both
+`gen_call` reads and `sim_estimateTransactionFees` for a concrete payable
+write return the exact server error:
+
+`Can't reconnect until invalid transaction is rolled back. Please rollback() fully before proceeding`
+
+No new challenge, funding transaction, or other live state mutation is being
+attempted while that error persists. This document therefore records no live
+fund-recovery proof for the new deployment.
 
