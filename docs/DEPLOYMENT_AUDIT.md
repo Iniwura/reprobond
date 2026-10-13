@@ -3,7 +3,7 @@
 ## Candidate source
 
 - Source: contracts/repro_bond.py
-- Candidate SHA-256: 42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd
+- Candidate SHA-256: 2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82
 - Network target: Studio Dev, chain 61997
 - Installed CLI: GenLayer 0.40.0-rc.3
 - Installed lint/runtime gates: genvm-lint 0.11.0, Python 3.12.3, pinned Direct Mode environment in /home/ini/materialproof/.venv.
