@@ -15,7 +15,7 @@ DRAFT -> FUNDED -> OPEN -> COMPLETE
 OPEN -> EXPIRED -> REFUNDED
 
 - DRAFT: immutable challenge definition exists, but no escrow is funded.
-- FUNDED: exact escrow equals required_slot_count times reward_per_replication.
+- FUNDED: exact escrow equals required_slot_count times reward_per_replication. If its deadline passes before activation, the sponsor may close it to EXPIRED; no replication records can exist in this state.
 - OPEN: new replication submissions are accepted only before the immutable deadline.
 - COMPLETE: qualified count reaches the required slot count. PASS records may still need settlement.
 - EXPIRED: an incomplete challenge was closed after the deadline. Pending work blocks closure until the recovery deadline; after that deadline pending records become `ABANDONED`.
@@ -28,6 +28,7 @@ Legal challenge transitions:
 - DRAFT -> FUNDED: sponsor funds the exact escrow before the deadline.
 - FUNDED -> OPEN: sponsor activates before the deadline.
 - OPEN -> COMPLETE: adjudication adds enough PASS records.
+- FUNDED -> EXPIRED: sponsor expires after the deadline when the challenge has no replication records. No transfer occurs during expiry; `refund_unused` performs the separate exact escrow recovery.
 - OPEN -> EXPIRED: sponsor expires after the deadline. If pending work exists, expiry is blocked during the grace period; at or after recovery it marks pending records `ABANDONED` without relabeling them `FAIL`.
 - EXPIRED -> REFUNDED: sponsor recovers only unused slot escrow, independently of outstanding PASS reserves.
 - Challenge definition fields have no update path.

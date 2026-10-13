@@ -39,7 +39,7 @@ ReproBond is a bounded protocol for reproducible quantitative/computational clai
 The listed deployment and audit are historical. The old contract is labeled
 historical v1 only, and the currently deployed corrected contract is also
 historical with respect to the new steward-fix candidate. The candidate source
-SHA is `ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`.
+SHA is `42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd`.
 It has not been deployed or funded.
 
 ## Reviewer corrections
@@ -48,6 +48,7 @@ The next release must be intentionally a new deployment, not a patch to the
 historical address. The candidate adds deterministic transaction-time
 recovery grace, explicit ABANDONED status for abandoned pending work,
 protected earned PASS reserves, sponsor recovery of only unused escrow, and
-settlement after sponsor refund. Optional evidence and qualified-count slot
+settlement after sponsor refund. It also recovers expired FUNDED escrow through
+the same sponsor-only expiry/refund path. Optional evidence and qualified-count slot
 capacity remain preserved. No deployment or Portal resubmission is authorized
 by this change.

@@ -1315,13 +1315,45 @@ class ReproBond(gl.contract.Contract):
     @gl.public.write
     def expire_challenge(self, challenge_id: str) -> str:
         challenge = self._challenge(_identifier(challenge_id, "challenge_id", MAX_CHALLENGE_ID))
-        if challenge.state != OPEN:
-            raise gl.vm.UserError("only an incomplete OPEN challenge may expire.")
+        if challenge.state not in {OPEN, FUNDED}:
+            raise gl.vm.UserError(
+                "only an incomplete OPEN or FUNDED challenge may expire."
+            )
         if _address_key(gl.message.sender_address) != _address_key(challenge.sponsor):
             raise gl.vm.UserError("only the sponsor may expire this challenge.")
         transaction_time = _transaction_utc()
         if transaction_time < _parse_utc(challenge.deadline_utc, "deadline_utc"):
             raise gl.vm.UserError("challenge deadline has not been reached.")
+
+        if challenge.state == FUNDED:
+            if self._challenge_ids(challenge.challenge_id):
+                raise gl.vm.UserError(
+                    "FUNDED challenge has unexpected replication records."
+                )
+            if (
+                int(challenge.escrow_funded) != int(challenge.expected_escrow)
+                or int(challenge.qualified_count) != 0
+                or int(challenge.adjudicated_count) != 0
+                or int(challenge.paid_count) != 0
+                or int(challenge.paid_total) != 0
+                or int(challenge.refunded_total) != 0
+            ):
+                raise gl.vm.UserError(
+                    "FUNDED challenge has unexpected accounting."
+                )
+            challenge.state = EXPIRED
+            self.challenges[challenge.challenge_id] = challenge
+            return _digest(
+                "REPROBOND-EXPIRY-V3",
+                {
+                    "challenge_id": challenge.challenge_id,
+                    "challenge_fingerprint": challenge.fingerprint,
+                    "qualified_count": 0,
+                    "recovery_deadline_utc": challenge.recovery_deadline_utc,
+                    "abandoned_replication_ids": [],
+                },
+            )
+
         if int(challenge.qualified_count) >= int(challenge.required_slot_count):
             raise gl.vm.UserError("completed challenge cannot use partial expiry.")
         recovery_reached = transaction_time >= _parse_utc(

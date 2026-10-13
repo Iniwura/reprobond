@@ -265,7 +265,7 @@ historical corrected source. They do not prove the two newer recovery
 properties requested by the steward.
 
 The local correction candidate now has source SHA-256
-`ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3` and is
+`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd` and is
 not deployed, funded, or resubmitted.
 
 It adds a fixed 86,400-second recovery grace derived from each frozen UTC
@@ -283,10 +283,11 @@ No live transaction hash exists for these candidate changes yet. A fresh
 deployment and a funded live proof covering both defects require explicit
 approval and remain pending below.
 
-## Fresh corrected deployment — pre-live-proof status
+## Previous corrected deployment — superseded by FUNDED recovery fix
 
-The corrected source is now deployed, without changing any historical
-deployment:
+The earlier corrected source was deployed, without changing any historical
+deployment. It is superseded because it did not recover an expired FUNDED
+challenge:
 
 - Current contract: `0x33735bbaa9595FBB1b8a9fFCC3A91103911baEdC`
 - Network: GenLayer Studio Dev, chain `61997`
@@ -294,7 +295,7 @@ deployment:
 - Deployment status: `FINALIZED`, `ACCEPTED`
 - Execution: `FINISHED_WITH_RETURN`
 - Consensus: `MAJORITY_AGREE`
-- Source SHA-256: `ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`
+- Source SHA-256: `ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3` (superseded)
 - Constructor: `ReproBond()` with zero arguments
 - Deployed schema: exact 15-method schema; source verification passed
 
@@ -313,7 +314,9 @@ Dev before the challenge can be safely inspected:
 - previously proven Studio-rendered methodology SHA-256 for identical bytes:
   `c124fdfed85d6ef4ef3f301c854994187151f3f35587d37166dbbde3f59bccac`
 
-The planned live demonstration is not claimed complete. It still requires a
+The planned live demonstration is not claimed complete. The new source SHA is
+`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd` and still
+requires a fresh deployment. It also requires a
 working authoritative Studio Dev `gen_call`/fee-simulation path, one
 consolidated authorization for any new GEN spending, challenge creation, and
 exact `2 wei` funding.

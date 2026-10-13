@@ -3,12 +3,12 @@
 ## Candidate source
 
 - Source: contracts/repro_bond.py
-- Candidate SHA-256: ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3
+- Candidate SHA-256: 42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd
 - Network target: Studio Dev, chain 61997
 - Installed CLI: GenLayer 0.40.0-rc.3
 - Installed lint/runtime gates: genvm-lint 0.11.0, Python 3.12.3, pinned Direct Mode environment in /home/ini/materialproof/.venv.
-- Deployment status: deployed to Studio Dev after explicit deployment approval; challenge funding remains separately unauthorized.
-- Current deployment: 0x33735bbaa9595FBB1b8a9fFCC3A91103911baEdC
+- Previous pre-fix candidate status: deployed to Studio Dev after explicit deployment approval; the corrected source below requires a fresh deployment.
+- Previous candidate deployment (pre-FUNDED-recovery fix): 0x33735bbaa9595FBB1b8a9fFCC3A91103911baEdC
 - Deployment transaction: 0x96fc388280e501c1790b5844f76ebc4a7fb8e032d22a907ef52eb2e19978530e
 - Deployment result: FINALIZED / ACCEPTED / FINISHED_WITH_RETURN / MAJORITY_AGREE
 - Historical corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
@@ -22,11 +22,15 @@ The historical v1 contract at 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc remains
 The candidate adds a fixed 86,400-second transaction-time recovery grace,
 explicit ABANDONED closure status, and protected PASS-reserve accounting.
 
-The current deployment source hash is
-`ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`, matching
-the local candidate. The deployed constructor is zero-argument and the
-authoritative deployed schema contains the exact 15-method candidate schema.
-The deployment was created independently of the historical challenge records.
+The previous deployment source hash is
+`ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`.
+The new local candidate hash is
+`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd` and is
+not deployed yet. The previous deployment's constructor is zero-argument and
+its authoritative schema contains the exact 15-method candidate schema.
+The previous deployment was created independently of the historical challenge records.
+It contains the earlier `ea1b0bc...` candidate and is not the deployment target
+for this new source revision.
 Authoritative view calls are currently blocked by a Studio Dev RPC error before
 contract execution; no new challenge is being created or funded while that
 condition persists.
@@ -34,22 +38,21 @@ condition persists.
 ## Local gates — current candidate
 
 Rerun on 2026-10-13 against source SHA
-`ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`:
+`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd`:
 
-- Direct Mode: **115 passed**.
+- Direct Mode: **117 passed**.
 - Python syntax: **passed**.
 - GenVM lint: **passed**, 3 checks.
-- GenVM validation: **blocked by missing cached runner artifact** for dependency
-  `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`; this is a
-  tooling-cache failure, not a contract execution result.
+- GenVM validation: **passed**, 15 methods (6 views, 9 writes), using the
+  installed `genvm-linter 0.11.1rc2` with the verified Studio Dev runner.
 - GenVM schema extraction: **passed**, exact 15-method schema.
-- GenVM typecheck: **blocked by the same missing cached runner artifact**.
+- GenVM typecheck: **passed**, no type errors.
 - Frontend protocol tests: **20 passed**.
 - Frontend TypeScript and production build: **passed**.
 
-The authoritative deployed source and schema were separately verified with the
+The previous deployment's source and schema were separately verified with the
 Studio Dev CLI. Direct Mode and frontend results are local candidate checks;
-the live proof remains pending. The current read/fee boundary is:
+the new source requires a fresh deployment and live proof. The current read/fee boundary is:
 `gen_call` and `sim_estimateTransactionFees` return Studio Dev error
 `Can't reconnect until invalid transaction is rolled back. Please rollback() fully before proceeding`.
 

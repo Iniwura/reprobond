@@ -38,10 +38,11 @@ escrow refund, and replay rejection. The detailed record is
 docs/STEWARD_AUDIT_20261007.md.
 
 The steward-fix candidate in this repository has source SHA-256
-ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3. It is not
+42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd. It is not
 deployed or represented by the historical live proof. It adds a fixed
 transaction-time recovery grace, explicit ABANDONED closure status, and
-protected PASS-reserve accounting.
+protected PASS-reserve accounting, plus sponsor-only recovery of expired
+FUNDED challenges before unused-escrow refund.
 
 ## Deployment labeling
 

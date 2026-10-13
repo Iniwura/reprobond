@@ -30,3 +30,4 @@
 28. `refunded_total` is explicit and one-shot; every later payout subtracts prior refunds.
 29. A PASS owner can claim its reserved reward after sponsor refund, but only the stored replicator can settle.
 30. `remaining_pool = escrow_funded - paid_total - refunded_total` is checked per challenge, preventing cross-challenge accounting reuse.
+31. An expired FUNDED challenge can be recovered only by its sponsor, only after its deadline, and only with zero replication records; expiry itself never transfers funds.

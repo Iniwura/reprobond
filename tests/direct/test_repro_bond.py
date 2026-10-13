@@ -1460,8 +1460,63 @@ def test_duplicate_expiry_rejected(
     direct_vm.sender = direct_alice
     contract.expire_challenge(CHALLENGE)
     install_transfer_spy(contract, monkeypatch)
-    with direct_vm.expect_revert("only an incomplete OPEN"):
+    with direct_vm.expect_revert("only an incomplete OPEN or FUNDED"):
         contract.expire_challenge(CHALLENGE)
+
+
+def test_expired_funded_challenge_can_expire_and_refund_exact_escrow(
+    direct_deploy, direct_vm, direct_alice, monkeypatch
+):
+    contract = deploy(direct_deploy)
+    create(contract, direct_vm, direct_alice, slots=2, reward=REWARD)
+    direct_vm.sender = direct_alice
+    direct_vm.value = 2 * REWARD
+    contract.fund_challenge(CHALLENGE)
+    direct_vm.value = 0
+
+    with direct_vm.expect_revert("deadline has not been reached"):
+        contract.expire_challenge(CHALLENGE)
+
+    advance_to_deadline(direct_vm)
+    contract.expire_challenge(CHALLENGE)
+    challenge = contract.get_challenge(CHALLENGE)
+    assert challenge["state"] == "EXPIRED"
+    assert challenge["escrow_funded"] == 2 * REWARD
+    assert challenge["qualified_count"] == 0
+    assert challenge["adjudicated_count"] == 0
+    assert contract.get_challenge_replication_ids(CHALLENGE) == []
+
+    spy = install_transfer_spy(contract, monkeypatch)
+    assert contract.refund_unused(CHALLENGE) == 2 * REWARD
+    assert spy.calls == [("0x" + direct_alice.hex(), 2 * REWARD)]
+    challenge = contract.get_challenge(CHALLENGE)
+    assert challenge["state"] == "REFUNDED"
+    assert challenge["refunded_total"] == 2 * REWARD
+    assert challenge["remaining_pool"] == 0
+
+    with direct_vm.expect_revert():
+        contract.refund_unused(CHALLENGE)
+
+
+def test_expired_funded_recovery_is_sponsor_only(
+    direct_deploy, direct_vm, direct_alice, direct_bob
+):
+    contract = deploy(direct_deploy)
+    create(contract, direct_vm, direct_alice, slots=1, reward=REWARD)
+    direct_vm.sender = direct_alice
+    direct_vm.value = REWARD
+    contract.fund_challenge(CHALLENGE)
+    direct_vm.value = 0
+    advance_to_deadline(direct_vm)
+
+    direct_vm.sender = direct_bob
+    with direct_vm.expect_revert("only the sponsor"):
+        contract.expire_challenge(CHALLENGE)
+    assert contract.get_challenge(CHALLENGE)["state"] == "FUNDED"
+
+    direct_vm.sender = direct_alice
+    contract.expire_challenge(CHALLENGE)
+    assert contract.get_challenge(CHALLENGE)["state"] == "EXPIRED"
 
 
 def test_complete_challenge_cannot_use_partial_expiry_path(
@@ -1474,7 +1529,7 @@ def test_complete_challenge_cannot_use_partial_expiry_path(
     adjudicate(contract, direct_vm, replication_id)
     advance_to_deadline(direct_vm)
     direct_vm.sender = direct_alice
-    with direct_vm.expect_revert("only an incomplete OPEN"):
+    with direct_vm.expect_revert("only an incomplete OPEN or FUNDED"):
         contract.expire_challenge(CHALLENGE)
 
 

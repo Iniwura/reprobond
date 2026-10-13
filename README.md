@@ -64,12 +64,14 @@ protected-reserve correction below.
 
 ## Steward correction candidate — not deployed
 
-- Candidate source SHA-256: ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3
+- Candidate source SHA-256: 42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd
 - Fixed recovery grace: 86,400 transaction-time seconds after each frozen deadline.
 - Pending `SUBMITTED` or repairable `UNRESOLVED` records become explicit `ABANDONED` after grace; they are never relabeled `FAIL` and never qualify or pay.
 - `refund_unused` returns only `escrow_funded - earned_liability`, records `refunded_total`, and does not wait for unrelated unpaid PASS claims.
 - An original PASS replicator may settle its reserved reward after sponsor recovery.
-- This candidate has not been deployed, funded, or live-audited.
+- This candidate has not been deployed, funded, or live-audited. It also adds
+  sponsor-only recovery for expired FUNDED challenges before the existing
+  unused-escrow refund path.
 
 ## Historical v1 deployment
 

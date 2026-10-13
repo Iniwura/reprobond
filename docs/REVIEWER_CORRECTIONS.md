@@ -4,7 +4,7 @@ Status: local correction candidate; not deployed, funded, or resubmitted.
 
 Historical corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
 Historical source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
-Candidate source SHA-256: ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3
+Candidate source SHA-256: 42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd
 Historical deployment transaction: 0x4e274c6d87bbe2b51b17c1c17df577b79960705c96e34920854c92502aecc9d4
 Historical live record: docs/STEWARD_AUDIT_20261007.md
 
@@ -13,7 +13,7 @@ Historical live record: docs/STEWARD_AUDIT_20261007.md
 - Helpers use the pinned Studio Dev SDK deterministic transaction time from `gl.message.raw["datetime"]`. No host wall clock is used.
 - Deadlines are accepted as exact UTC `YYYY-MM-DDTHH:MM:SSZ` strings and must be strictly future when a challenge is created.
 - Funding, activation, and new replication submission are blocked at the frozen deadline. Already-submitted records remain adjudicable, repairable within the bound, and settleable after the deadline.
-- Expiry requires OPEN, the sponsor, a reached deadline, and an incomplete qualified count. SUBMITTED and repairable UNRESOLVED records block expiry during the deterministic 24-hour recovery grace; after grace they become explicit ABANDONED records, never FAIL.
+- Expiry requires an incomplete OPEN or FUNDED challenge, the sponsor, and a reached deadline. An expired FUNDED challenge has no replication records and can transition directly to EXPIRED, making its full escrow recoverable through the existing refund path. SUBMITTED and repairable UNRESOLVED records block OPEN expiry during the deterministic 24-hour recovery grace; after grace they become explicit ABANDONED records, never FAIL.
 - Partial challenges may become EXPIRED after pending work is resolved or abandoned after grace. Earned PASS rewards survive expiry; the sponsor may recover only unearned slot escrow while PASS reserves remain payable.
 - An unpaid PASS remains settleable after the challenge becomes REFUNDED; settlement subtracts prior `refunded_total` and can only be called by the stored replicator.
 - The frontend handles the contract's required evidence flag, authoritative qualified slots, and exact non-millisecond UTC deadline serialization.
@@ -25,6 +25,7 @@ Historical live record: docs/STEWARD_AUDIT_20261007.md
 | create_challenge | deadline must be strictly future relative to the transaction time |
 | fund_challenge / activate_challenge | not allowed at or after deadline |
 | submit_replication | closes new participation at the deadline |
+| expire_challenge | sponsor may close expired FUNDED challenges with no records, or incomplete OPEN challenges under the recovery rules |
 | adjudicate_replication / repair_unresolved / settle_replication | adjudication and bounded repair remain available during the recovery window; settlement remains available through EXPIRED and REFUNDED for existing PASS records |
 
 ## Frontend validation
