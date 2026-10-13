@@ -39,7 +39,7 @@ ReproBond is a bounded protocol for reproducible quantitative/computational clai
 The listed deployment and audit are historical. The old contract is labeled
 historical v1 only, and the currently deployed corrected contract is also
 historical with respect to the new steward-fix candidate. The candidate source
-SHA is `42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd`.
+SHA is `2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82`.
 It has not been deployed or funded.
 
 ## Reviewer corrections

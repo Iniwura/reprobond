@@ -4,7 +4,7 @@ Status: local correction candidate; not deployed, funded, or resubmitted.
 
 Historical corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
 Historical source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
-Candidate source SHA-256: 42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd
+Candidate source SHA-256: 2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82
 Historical deployment transaction: 0x4e274c6d87bbe2b51b17c1c17df577b79960705c96e34920854c92502aecc9d4
 Historical live record: docs/STEWARD_AUDIT_20261007.md
 

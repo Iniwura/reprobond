@@ -25,7 +25,7 @@ explicit ABANDONED closure status, and protected PASS-reserve accounting.
 The previous deployment source hash is
 `ea1b0bcde33e67f3a09c7c934e8471fcba09bda711f65d000d5a8760c21db9a3`.
 The new local candidate hash is
-`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd` and is
+`2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82` and is
 not deployed yet. The previous deployment's constructor is zero-argument and
 its authoritative schema contains the exact 15-method candidate schema.
 The previous deployment was created independently of the historical challenge records.
@@ -38,7 +38,7 @@ condition persists.
 ## Local gates — current candidate
 
 Rerun on 2026-10-13 against source SHA
-`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd`:
+`2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82`:
 
 - Direct Mode: **117 passed**.
 - Python syntax: **passed**.

@@ -265,7 +265,7 @@ historical corrected source. They do not prove the two newer recovery
 properties requested by the steward.
 
 The local correction candidate now has source SHA-256
-`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd` and is
+`2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82` and is
 not deployed, funded, or resubmitted.
 
 It adds a fixed 86,400-second recovery grace derived from each frozen UTC
@@ -315,7 +315,7 @@ Dev before the challenge can be safely inspected:
   `c124fdfed85d6ef4ef3f301c854994187151f3f35587d37166dbbde3f59bccac`
 
 The planned live demonstration is not claimed complete. The new source SHA is
-`42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd` and still
+`2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82` and still
 requires a fresh deployment. It also requires a
 working authoritative Studio Dev `gen_call`/fee-simulation path, one
 consolidated authorization for any new GEN spending, challenge creation, and

@@ -64,7 +64,7 @@ protected-reserve correction below.
 
 ## Steward correction candidate — not deployed
 
-- Candidate source SHA-256: 42b14953983c492c22b98eaede74154932bc49809ef11ce0d795a750575c2bfd
+- Candidate source SHA-256: 2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82
 - Fixed recovery grace: 86,400 transaction-time seconds after each frozen deadline.
 - Pending `SUBMITTED` or repairable `UNRESOLVED` records become explicit `ABANDONED` after grace; they are never relabeled `FAIL` and never qualify or pay.
 - `refund_unused` returns only `escrow_funded - earned_liability`, records `refunded_total`, and does not wait for unrelated unpaid PASS claims.
