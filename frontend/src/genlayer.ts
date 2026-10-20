@@ -2,7 +2,7 @@ import { createClient, isSuccessful } from 'genlayer-js'
 import { studioDevnet } from 'genlayer-js/chains'
 import { TransactionHashVariant, type CalldataEncodable } from 'genlayer-js/types'
 
-export const CONTRACT_ADDRESS = '0x897a7dF67E638506557985FE795Ff2F762f01607' as `0x${string}`
+export const CONTRACT_ADDRESS = '0xBe987E257a07dF2EC17FFcF92764674C5F9b8077' as `0x${string}`
 export const CHAIN_ID = 61997
 export const CHAIN_HEX = `0x${CHAIN_ID.toString(16)}`
 export const RPC_URL = 'https://studio-dev.genlayer.com/api'

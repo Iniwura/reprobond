@@ -7,10 +7,10 @@
 - Network target: Studio Dev, chain 61997
 - Installed CLI: GenLayer 0.40.0-rc.3
 - Installed lint/runtime gates: genvm-lint 0.11.0, Python 3.12.3, pinned Direct Mode environment in /home/ini/materialproof/.venv.
-- Previous pre-fix candidate status: deployed to Studio Dev after explicit deployment approval; the corrected source below requires a fresh deployment.
-- Previous candidate deployment (pre-FUNDED-recovery fix): 0x33735bbaa9595FBB1b8a9fFCC3A91103911baEdC
-- Deployment transaction: 0x96fc388280e501c1790b5844f76ebc4a7fb8e032d22a907ef52eb2e19978530e
-- Deployment result: FINALIZED / ACCEPTED / FINISHED_WITH_RETURN / MAJORITY_AGREE
+- Current candidate status: deployed to Studio Dev (Chain 61997)
+- Current deployed candidate address: 0xBe987E257a07dF2EC17FFcF92764674C5F9b8077
+- Deployment transaction: 0xe4b50cfafb355d2802a4dd5cdd38be1123bbe4a9d167119def7f1dac82b438f5
+- Deployment result: FINALIZED / ACCEPTED / SUCCESSFUL / 15-method schema verified
 - Historical corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
 - Historical deployment transaction: 0x4e274c6d87bbe2b51b17c1c17df577b79960705c96e34920854c92502aecc9d4
 - Canonical live challenge: none on this deployment yet
