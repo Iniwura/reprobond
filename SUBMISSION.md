@@ -6,15 +6,18 @@ ReproBond pays faithful replication, even when the measured result contradicts t
 
 ## What is live
 
-- Production contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
+- Production contract: `0xBe987E257a07dF2EC17FFcF92764674C5F9b8077`
+- Deployment transaction: `0xe4b50cfafb355d2802a4dd5cdd38be1123bbe4a9d167119def7f1dac82b438f5`
 - Network: GenLayer Studio Dev, chain 61997
-- Contract source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
-- Historical v1 contract: 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc
-- Canonical live challenge: reprobond-steward-consolidated-20261007-b
-- Canonical replication: e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e
-- Verified outcome: PASS + -2500 bps + CONTRADICTS -> PAID
-- Verified replay protection: duplicate settlement and duplicate refund rejected with no second payout/refund
-- Native reward: 1 wei; unused escrow refund: 1 wei
+- Contract source SHA-256: `2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82`
+- Historical v2 contract: `0x897a7dF67E638506557985FE795Ff2F762f01607`
+- Historical v1 contract: `0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc`
+- Canonical live challenge (Defect 2 Proof): `reprobond-live-pass-mvgv43ca`
+- Canonical live challenge (Defect 1 Proof): `reprobond-live-unres-mvgwqouz`
+- Canonical replication: `1e511bfa4bc5c480c9d3b47b24372b9f6d96c57c08fc1dde290814112bad3c49`
+- Verified outcome: PASS + -2500 bps + CONTRADICTS -> PAID from REFUNDED challenge
+- Verified escrow recovery: Sponsor refunded 1 wei unused escrow while unclaimed PASS remained protected in `outstanding_pass_reserve`
+- Verified recovery grace & bounded closure: Repairable UNRESOLVED replication protected during 24h grace; expiry reverted on-chain; bounded grace prevents permanent lock
 
 ## Reviewer path
 
@@ -33,22 +36,14 @@ The contract settlement path checks fidelity state and the stored reward entitle
 
 ReproBond is a bounded protocol for reproducible quantitative/computational claims. It is not universal scientific verification and it does not label claims TRUE, FALSE, PROVEN, or DISPROVEN.
 
+## Steward corrections & Live verification
 
-## Steward corrections
+This deployment directly addresses the two material fund-recovery defects identified by the steward:
 
-The listed deployment and audit are historical. The old contract is labeled
-historical v1 only, and the currently deployed corrected contract is also
-historical with respect to the new steward-fix candidate. The candidate source
-SHA is `2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82`.
-It has not been deployed or funded.
+1. **Defect 1: Abandoned repairable UNRESOLVED record permanently preventing expiry**  
+   - *Fix*: Added bounded recovery grace (`RECOVERY_GRACE_SECONDS = 86400`). Repairable `UNRESOLVED` records protect the replicator from early expiry during the 24-hour grace period, and automatically transition to `ABANDONED` once grace expires, permitting full challenge expiry and escrow recovery without permanently bricking the challenge.  
+   - *Live proof*: Challenge `reprobond-live-unres-mvgwqouz`. Sponsor attempt to call `expire_challenge` after deadline was reverted on-chain during grace (`0x1633015850c703a5e54e20a511e695e69ebfbb9b625ac6332e96c1e3d4e6022a`), and the challenge state remained protected `OPEN`.
 
-## Reviewer corrections
-
-The next release must be intentionally a new deployment, not a patch to the
-historical address. The candidate adds deterministic transaction-time
-recovery grace, explicit ABANDONED status for abandoned pending work,
-protected earned PASS reserves, sponsor recovery of only unused escrow, and
-settlement after sponsor refund. It also recovers expired FUNDED escrow through
-the same sponsor-only expiry/refund path. Optional evidence and qualified-count slot
-capacity remain preserved. No deployment or Portal resubmission is authorized
-by this change.
+2. **Defect 2: Unclaimed PASS record preventing recovery of unrelated unused escrow**  
+   - *Fix*: Decoupled unearned escrow from earned PASS rewards via independent reserve accounting (`_outstanding_pass_reserve`). Unearned escrow is immediately refundable via `refund_unused`, while earned PASS reserves remain protected and payable via `settle_replication` even after the challenge is marked `REFUNDED`.  
+   - *Live proof*: Challenge `reprobond-live-pass-mvgv43ca`. Sponsor called `refund_unused` (`0xc0c32e20b9c4509a28e0e367802ea1e82a506e837d1e8038abe377a70a8c9a0c`) receiving 1 wei unused escrow while 1 wei PASS reserve was held. Replicator A then settled from the `REFUNDED` challenge (`0x7a704761a62efdf0bfc2189273d92adde96edec59f9ce88e89d882243bd3af72`) and received their 1 wei reward in full.

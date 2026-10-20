@@ -1,0 +1,46 @@
+{
+  "network": "GenLayer Studio Dev (Chain ID: 61997)",
+  "contractAddress": "0xBe987E257a07dF2EC17FFcF92764674C5F9b8077",
+  "deployTx": "0xe4b50cfafb355d2802a4dd5cdd38be1123bbe4a9d167119def7f1dac82b438f5",
+  "contractSourceSha256": "2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82",
+  "deployer": "0xcE5348Ced92f54aE2407b41E754465DfC2E6cA78",
+  "phase1_defect2_unclaimed_pass_escrow_recovery": {
+    "challengeId": "reprobond-live-pass-mvgv43ca",
+    "description": "Unclaimed PASS does not block sponsor recovery of unrelated unused escrow, and PASS remains settleable on REFUNDED challenge",
+    "transactions": {
+      "create_challenge": "0x024332444ff152123b4ff9236323db05b4148a1c6a511830721a63e9d7202b93",
+      "fund_challenge": "0x3278e31f5842eebf9b19b48bf1d848fb636e2dbe3e6ea929f6f856d4bf0c647c",
+      "activate_challenge": "0xfc5363d4993ce263b31da440db8041261de3bfa9ba75f9a9e5f943bba4ed469b",
+      "submit_replication": "0x8c80ec2514307120dc16024468db7ef3987f87a0188a5625a2ddccd483a4b802",
+      "adjudicate_replication": "0xb698cd9906c69007f18881fdd5f878679d6598d3267c2da6c24873c566526a68",
+      "expire_challenge": "0x207ca663794f13f8ac68fad42903a8a8f11627c616d2660ebd7f55fad8b1489c",
+      "refund_unused": "0xc0c32e20b9c4509a28e0e367802ea1e82a506e837d1e8038abe377a70a8c9a0c",
+      "settle_replication": "0x7a704761a62efdf0bfc2189273d92adde96edec59f9ce88e89d882243bd3af72"
+    },
+    "replicationId": "1e511bfa4bc5c480c9d3b47b24372b9f6d96c57c08fc1dde290814112bad3c49",
+    "verifiedStateProgression": [
+      "OPEN -> FUNDED (2 wei) -> OPEN (activated)",
+      "Replication A: SUBMITTED -> PASS + -2500 bps + CONTRADICTS",
+      "Deadline reached -> EXPIRED (refundable_unused: 1 wei, outstanding_pass_reserve: 1 wei)",
+      "refund_unused executed -> REFUNDED (1 wei returned to sponsor, 1 wei pass reserve retained)",
+      "settle_replication executed on REFUNDED challenge -> paid 1 wei reward to Replicator A, remaining_pool: 0"
+    ]
+  },
+  "phase2_defect1_unresolved_recovery_grace": {
+    "challengeId": "reprobond-live-unres-mvgwqouz",
+    "description": "Repairable UNRESOLVED replication protects replicator during 24h recovery grace, preventing premature expiry, while bounded grace prevents permanent lock",
+    "transactions": {
+      "create_challenge": "0x9cfa6c56cfc1d1a50e5bb295d93dbbe1b806520a7a07128bb81bbba4d62dd07c",
+      "fund_challenge": "0x965d3b181161749baf12892f194858a8ffd424756d9bde18d1e8d92be4f2b183",
+      "activate_challenge": "0x9c190a2c9abe17c444b31cd4a682dca466ce1f70c268534cd0d8c0bdc1103212",
+      "submit_replication": "0x2ff4a28654e3a7db9de16a233d215545b44718a2f6a5e34e5c6fc5ea619aca4d",
+      "adjudicate_replication": "0x93e0b493722b1bdeb9fcb872fbc4570e80e95295eddded4620c2b2192271c0cc",
+      "attempted_expire_during_grace": "0x1633015850c703a5e54e20a511e695e69ebfbb9b625ac6332e96c1e3d4e6022a"
+    },
+    "replicationId": "2820f39e1c1cf81b024d88c07e19c378258e35f80b91649d26c043839f72eda7",
+    "deadlineUtc": "2026-10-20T16:45:28Z",
+    "recoveryDeadlineUtc": "2026-10-21T16:45:28Z",
+    "attemptResult": "FINISHED_WITH_ERROR (Consensus Reverted: repairable UNRESOLVED replication blocks expiry during the recovery grace period)",
+    "challengeStateProtected": "OPEN"
+  }
+}

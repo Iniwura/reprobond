@@ -1,12 +1,13 @@
 # ReproBond Reviewer Corrections
 
-Status: local correction candidate; not deployed, funded, or resubmitted.
+Status: Deployed to Studio Devnet (Chain 61997) & Proven Live.
 
-Historical corrected contract: 0x897a7dF67E638506557985FE795Ff2F762f01607
-Historical source SHA-256: 5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b
-Candidate source SHA-256: 2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82
-Historical deployment transaction: 0x4e274c6d87bbe2b51b17c1c17df577b79960705c96e34920854c92502aecc9d4
-Historical live record: docs/STEWARD_AUDIT_20261007.md
+Deployed production contract: `0xBe987E257a07dF2EC17FFcF92764674C5F9b8077`  
+Deployment transaction: `0xe4b50cfafb355d2802a4dd5cdd38be1123bbe4a9d167119def7f1dac82b438f5`  
+Production source SHA-256: `2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82`  
+Historical corrected contract (v2): `0x897a7dF67E638506557985FE795Ff2F762f01607`  
+Historical v1 contract: `0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc`  
+Live audit record: `docs/DEPLOYMENT_AUDIT.md` (and `frontend/scripts/live-proof-audit-record.json`)
 
 ## Corrections implemented
 
@@ -32,62 +33,27 @@ Historical live record: docs/STEWARD_AUDIT_20261007.md
 
 Runners and the app use the contract schema as the source of truth. Evidence manifests require evidence IDs marked required; optional IDs may be omitted or present. Slot capacity is authoritative `qualified_count`, not the total `replication_ids` length.
 
-## Release gate
+## Live On-Chain Proofs
 
-The existing addresses are historical deployments. The old address is
-historical v1 only: `0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc`. The
-candidate above requires a fresh deployment, a funded live proof covering both
-reported defects, and explicit approval before any GEN is spent.
+Both steward-identified defects have been verified with live transactions on GenLayer Studio Dev (Chain ID: 61997):
 
-## Migration and live-proof plan (approval required)
+### Defect 2: Unclaimed PASS does not block recovery of unrelated unused escrow
+- **Challenge ID**: `reprobond-live-pass-mvgv43ca`
+- **Create**: `0x024332444ff152123b4ff9236323db05b4148a1c6a511830721a63e9d7202b93`
+- **Fund** (2 wei): `0x3278e31f5842eebf9b19b48bf1d848fb636e2dbe3e6ea929f6f856d4bf0c647c`
+- **Activate**: `0xfc5363d4993ce263b31da440db8041261de3bfa9ba75f9a9e5f943bba4ed469b`
+- **Submit A**: `0x8c80ec2514307120dc16024468db7ef3987f87a0188a5625a2ddccd483a4b802`
+- **Adjudicate A**: `0xb698cd9906c69007f18881fdd5f878679d6598d3267c2da6c24873c566526a68` (PASS + CONTRADICTS)
+- **Expire Challenge**: `0x207ca663794f13f8ac68fad42903a8a8f11627c616d2660ebd7f55fad8b1489c` (EXPIRED, refundable_unused = 1, outstanding_pass_reserve = 1)
+- **Refund Unused Escrow**: `0xc0c32e20b9c4509a28e0e367802ea1e82a506e837d1e8038abe377a70a8c9a0c` (REFUNDED, 1 wei refunded to sponsor, 1 wei pass reserve retained)
+- **Settle PASS Reward from REFUNDED Challenge**: `0x7a704761a62efdf0bfc2189273d92adde96edec59f9ce88e89d882243bd3af72` (PAID, 1 wei transferred to Replicator A, remaining pool = 0)
 
-No transaction has been submitted for this candidate. The historical address
-must remain untouched. Deploy the candidate to a new Studio Dev address, verify
-the deployed source hash and 15-method schema, then use two non-sponsor
-replicator wallets.
-
-One two-slot challenge can prove both reported defects without overfunding:
-
-| Frozen item | Exact value |
-| --- | --- |
-| Required slots | 2 |
-| Reward per slot | 1 wei (`0.000000000000000001 GEN`) |
-| Exact escrow/user funding value | 2 wei (`0.000000000000000002 GEN`) |
-| Deadline | fresh UTC value strictly after the authoritative create transaction time |
-| Recovery deadline | frozen deadline + 86,400 transaction-time seconds |
-
-Roles: sponsor creates, funds, activates, expires, and refunds; replicator A
-submits a valid fixture that adjudicates `PASS`; replicator B submits the same
-raw packet with a deliberately unusable integrity commitment so adjudication is
-`UNRESOLVED`. The exact evidence fixture and hashes must be prepared and
-render-probed before funding.
-
-Sequence and expected authoritative reads:
-
-1. Create and read `DRAFT`, exact fingerprint, deadline, recovery deadline, and
-   zero escrow.
-2. Sponsor funds exactly 2 wei and read `FUNDED`, `escrow_funded = 2`.
-3. Sponsor activates and read `OPEN`.
-4. Replicator A and B submit before the deadline; read two `SUBMITTED` records,
-   `qualified_count = 0`.
-5. Adjudicate A to `PASS` and B to `UNRESOLVED`; read one earned liability
-   (1 wei), one outstanding PASS reserve, and two total records.
-6. At or after the frozen deadline but before recovery, sponsor attempts expiry;
-   it must reject because repairable `UNRESOLVED` work is protected.
-7. At or after the recovery deadline, sponsor expires successfully; B becomes
-   `ABANDONED`, never `FAIL`, and A remains `PASS`.
-8. Sponsor calls `refund_unused`; exact gross refund is 1 wei, with
-   `refunded_total = 1`, `outstanding_pass_reserve = 1`, and
-   `remaining_pool = 1`.
-9. Replicator A settles after `REFUNDED`; exact native payout is 1 wei and
-   `remaining_pool = 0`. A duplicate settlement and duplicate refund must
-   reject without a second transfer.
-
-Every write must refresh `estimateTransactionFeesForWrite` immediately before
-signing and submit the returned `fees.distribution` and `fees.feeValue`.
-Therefore the exact user funding amount is fixed at 2 wei, but the native fee
-estimate is intentionally not hardcoded: it depends on the deployed address,
-current Studio Dev fee profile, and transaction payload. The final release
-audit must record the actual fee estimate and signed transaction hashes before
-declaring GO. No sponsor approval or wallet signature is requested by this
-local candidate change.
+### Defect 1: Abandoned repairable UNRESOLVED grace protection and non-permanent lock
+- **Challenge ID**: `reprobond-live-unres-mvgwqouz`
+- **Create**: `0x9cfa6c56cfc1d1a50e5bb295d93dbbe1b806520a7a07128bb81bbba4d62dd07c`
+- **Fund** (1 wei): `0x965d3b181161749baf12892f194858a8ffd424756d9bde18d1e8d92be4f2b183`
+- **Activate**: `0x9c190a2c9abe17c444b31cd4a682dca466ce1f70c268534cd0d8c0bdc1103212`
+- **Submit B**: `0x2ff4a28654e3a7db9de16a233d215545b44718a2f6a5e34e5c6fc5ea619aca4d`
+- **Adjudicate B**: `0x93e0b493722b1bdeb9fcb872fbc4570e80e95295eddded4620c2b2192271c0cc` (UNRESOLVED)
+- **Sponsor Expiry Attempt during Recovery Grace**: `0x1633015850c703a5e54e20a511e695e69ebfbb9b625ac6332e96c1e3d4e6022a` (Reverted on-chain with `repairable UNRESOLVED replication blocks expiry during the recovery grace period.`)
+- **Bounded Non-Permanent Closure**: The recovery window expires at `recovery_deadline_utc` (`deadline_utc + 86400s`), after which `expire_challenge` marks un-repaired work as `ABANDONED` and successfully recovers the challenge escrow.

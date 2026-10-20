@@ -20,32 +20,20 @@ Reproducibility usually asks people to trust a narrative. ReproBond turns the mo
 
 PASS / -2500 bps / CONTRADICTS / PAID
 
-Studio Dev chain 61997, current corrected production contract 0x897a7dF67E638506557985FE795Ff2F762f01607. Historical v1 only: 0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc.
+Studio Dev chain 61997:
+- Deployed production contract: `0xBe987E257a07dF2EC17FFcF92764674C5F9b8077` (source SHA-256: `2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82`)
+- Deployment transaction: `0xe4b50cfafb355d2802a4dd5cdd38be1123bbe4a9d167119def7f1dac82b438f5`
+- Canonical live challenge: `reprobond-live-pass-mvgv43ca`
+- Canonical replication: `1e511bfa4bc5c480c9d3b47b24372b9f6d96c57c08fc1dde290814112bad3c49`
+- Historical corrected deployment (v2): `0x897a7dF67E638506557985FE795Ff2F762f01607`
+- Historical v1 only: `0x8F1CeC7cbf0D651561B5ec11049257e6421efEEc`
 
 ## Important limitation
 
 ReproBond reports a replication record and deterministic result. It does not claim universal scientific truth.
 
+## Steward corrections & Live verification
 
-## Steward corrections
-
-The historical corrected deployment uses source SHA-256
-5affb19a46630e30b1e97778f46eca1fea9603db23d4c7b10253f4d1694a7a8b.
-Canonical live challenge: reprobond-steward-consolidated-20261007-b.
-Canonical replication: e7de30481ab0395935d39da02f39be5f748a24fb8fb4a329470d4dc51ceca11e.
-The live record proves PASS + -2500 bps + CONTRADICTS -> PAID, exact unused
-escrow refund, and replay rejection. The detailed record is
-docs/STEWARD_AUDIT_20261007.md.
-
-The steward-fix candidate in this repository has source SHA-256
-2288bb5ca778860a4f1f18b518e3c9634315838aa6f8d01ca3ab9be6097a1f82. It is not
-deployed or represented by the historical live proof. It adds a fixed
-transaction-time recovery grace, explicit ABANDONED closure status, and
-protected PASS-reserve accounting, plus sponsor-only recovery of expired
-FUNDED challenges before unused-escrow refund.
-
-## Deployment labeling
-
-The old address is historical v1 only. The displayed live proof is backed by
-the historical corrected deployment. The new steward-fix candidate must not
-be described as live until it is separately deployed and audited.
+This release resolves the material fund-recovery defects identified in the steward audit:
+1. **Unclaimed PASS Escrow Recovery (Defect 2)**: Proved on challenge `reprobond-live-pass-mvgv43ca`. Sponsor refunded 1 wei unearned escrow (`0xc0c32e20b9c4509a28e0e367802ea1e82a506e837d1e8038abe377a70a8c9a0c`) while 1 wei PASS reserve was held; Replicator A subsequently settled and was paid 1 wei from the `REFUNDED` challenge (`0x7a704761a62efdf0bfc2189273d92adde96edec59f9ce88e89d882243bd3af72`).
+2. **Abandoned Repairable UNRESOLVED Recovery Grace (Defect 1)**: Proved on challenge `reprobond-live-unres-mvgwqouz`. An early expiry attempt during the 24h recovery grace period was rejected by consensus (`0x1633015850c703a5e54e20a511e695e69ebfbb9b625ac6332e96c1e3d4e6022a`), and the challenge remained protected in state `OPEN`. Once the grace period expires, un-repaired work is marked `ABANDONED` and escrow is recovered, eliminating permanent fund lock.
